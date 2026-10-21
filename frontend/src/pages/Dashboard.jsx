@@ -35,7 +35,7 @@ const Dashboard = () => {
   const [paymentMethod, setPaymentMethod] = useState('receipt');
   const [receiptFile, setReceiptFile] = useState(null);
   const [txRef, setTxRef] = useState('');
-  const [isSubmittingPayment, setIsSubmittingPayment] = useState(false); // 👈 State entsha yokuzungeza kwenkinobho
+  const [isSubmittingPayment, setIsSubmittingPayment] = useState(false);
 
   // Image Preview Zoom State
   const [previewImage, setPreviewImage] = useState(null);
@@ -74,7 +74,7 @@ const Dashboard = () => {
       let endpoint = txRefVal ? `/payment/chapa-verify/${txRefVal}` : `/payment/chapa-verify/latest`;
       const { data } = await API.get(endpoint);
       
-      alert('🎉 የ Chapa ክፍያዎ በስኬት ተረጋግጧል!');
+      alert('🎉 የ Chapa ክፍያዎ በስኬት ተረጋግጧ!');
       
       window.history.replaceState({}, document.title, window.location.pathname);
       
@@ -102,7 +102,7 @@ const Dashboard = () => {
       const { data } = await API.get('/ekub');
       setGroups(data);
     } catch (err) {
-      console.error('እቁቦችን ማምጣት አልተቻለም', err);
+      console.error('እቁቦችን ማጥመድ አዳልተቻለም', err);
     } finally {
       setLoading(false);
     }
@@ -113,7 +113,7 @@ const Dashboard = () => {
       const { data } = await API.get('/payment/pending');
       setPendingPayments(data);
     } catch (err) {
-      console.error('የሚጠብቁ ክፍያዎችን ማግኘት አልተቻለም', err);
+      console.error('የሚጠበቁ ክፍያዎችን ማግኘት አልተቻለም', err);
     }
   };
 
@@ -175,7 +175,7 @@ const Dashboard = () => {
 
   const handlePayment = async (e) => {
     e.preventDefault();
-    setIsSubmittingPayment(true); // 👈 Qala ukuzungeza
+    setIsSubmittingPayment(true);
 
     if (paymentMethod === 'chapa') {
       try {
@@ -183,13 +183,22 @@ const Dashboard = () => {
           ekubGroupId: selectedGroup._id,
           amount: selectedGroup.contributionAmount
         });
-        window.location.href = data.checkout_url;
+        
+        // 🛠️ FIX: Chapa checkout URL በትክክል እንዲነበብ ተደረገ
+        const checkoutUrl = data?.data?.checkout_url || data?.checkout_url;
+
+        if (checkoutUrl) {
+          window.location.href = checkoutUrl;
+        } else {
+          alert('የክፍያ ሊንክ ማግኘት አልተቻለም!');
+          setIsSubmittingPayment(false);
+        }
       } catch (err) {
         const errorMsg = typeof err.response?.data === 'string' 
           ? err.response.data 
           : err.response?.data?.message || 'የ Chapa ክፍያ መጀመር አልተቻለም';
         alert(errorMsg);
-        setIsSubmittingPayment(false); // 👈 Misa ukuzungeza uma kunephutha
+        setIsSubmittingPayment(false);
       }
     } else {
       if (!receiptFile && !txRef) {
@@ -207,7 +216,7 @@ const Dashboard = () => {
         await API.post('/payment/upload-receipt', formData, {
           headers: { 'Content-Type': 'multipart/form-data' }
         });
-        alert('የባንክ ደረሰኝ በስኬት ተላክዋል!');
+        alert('የባንክ ደረሰኝ በስኬት ተላክቷል!');
         setShowPayModal(false);
         setReceiptFile(null);
         setTxRef('');
@@ -215,7 +224,7 @@ const Dashboard = () => {
       } catch (err) {
         alert(err.response?.data?.message || 'ደረሰኝ መላክ አልተቻለም');
       } finally {
-        setIsSubmittingPayment(false); // 👈 Misa ukuzungeza
+        setIsSubmittingPayment(false);
       }
     }
   };
@@ -242,7 +251,7 @@ const Dashboard = () => {
         {/* Admin Pending Receipts Approvals Section */}
         {user?.role === 'admin' && pendingPayments.length > 0 && (
           <div className="bg-white p-6 rounded-xl shadow-sm border border-yellow-300 mb-8 bg-yellow-50/20">
-            <h2 className="text-lg font-bold text-gray-800 mb-4">የሚጠብቁ የክፍያ ደረሰኞች ({pendingPayments.length})</h2>
+            <h2 className="text-lg font-bold text-gray-800 mb-4">የሚጠበቁ የክፍያ ደረሰኞች ({pendingPayments.length})</h2>
             <div className="space-y-4">
               {pendingPayments.map((p) => (
                 <div key={p._id} className="flex justify-between items-center p-4 border rounded-lg bg-white shadow-sm gap-4">
@@ -252,7 +261,7 @@ const Dashboard = () => {
                       <div 
                         onClick={() => setPreviewImage(p.receiptUrl)}
                         className="cursor-pointer group relative"
-                        title="በግልጽ ለማየት ክፈት"
+                        title="በግልጽ ለማየት ክሊክ"
                       >
                         <img 
                           src={p.receiptUrl} 
@@ -260,7 +269,7 @@ const Dashboard = () => {
                           className="w-20 h-20 object-cover rounded-lg border group-hover:opacity-90 shadow-sm transition"
                         />
                         <span className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 rounded-lg flex items-center justify-center text-white text-xs font-bold transition">
-                          🔍 ማጎላት
+                          🔍 ማግኘት
                         </span>
                       </div>
                     ) : (
@@ -272,7 +281,7 @@ const Dashboard = () => {
                     <div>
                       <p className="font-bold text-gray-800">{p.member?.name} ({p.member?.phone})</p>
                       <p className="text-sm text-gray-600">
-                        እቁብ፦ <span className="font-semibold">{p.ekubGroup?.title}</span> | መጠን፦ <span className="font-semibold text-green-600">{p.amount} ብር</span>
+                        እቁብ፡ <span className="font-semibold">{p.ekubGroup?.title}</span> | መጠን፡ <span className="font-semibold text-green-600">{p.amount} ብር</span>
                       </p>
                       
                       {p.receiptUrl && (
@@ -280,7 +289,7 @@ const Dashboard = () => {
                           onClick={() => setPreviewImage(p.receiptUrl)}
                           className="text-xs text-blue-600 font-semibold underline mt-1 hover:text-blue-800 block text-left"
                         >
-                          🔍 ምስሉን አስፋው እዚህ ጋር
+                          🔍 ምስሉን አስፋ እዚህ ክሊክ
                         </button>
                       )}
                       
@@ -312,13 +321,13 @@ const Dashboard = () => {
         )}
 
         <div className="flex justify-between items-center mb-6">
-          <h2 className="text-2xl font-bold text-gray-800">የእቁብ ቡድኖች</h2>
+          <h2 className="text-2xl font-bold text-gray-800">የእቁብ ቢሮዎች</h2>
           {user?.role === 'admin' && (
             <button
               onClick={() => setShowCreateModal(true)}
               className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition"
             >
-              <PlusCircle size={18} /> አዲስ እቁብ ፈጠር
+              <PlusCircle size/={18} /> አዲስ እቁብ ፈጠር
             </button>
           )}
         </div>
@@ -332,7 +341,7 @@ const Dashboard = () => {
           </div>
         ) : groups.length === 0 ? (
           <div className="text-center py-12 bg-white rounded-xl border p-8 text-gray-500">
-            ምንም የእቁብ ቡድኖች የሉም።
+            ምንም የእቁብ ቢሮዎች የሉም።
           </div>
         ) : (
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -352,10 +361,10 @@ const Dashboard = () => {
                     <div className="flex justify-between items-start mb-3">
                       <h3 className="font-bold text-lg text-gray-800">{group.title}</h3>
                       <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${group.type === 'target' ? 'bg-purple-100 text-purple-700' : 'bg-green-100 text-green-700'}`}>
-                        {group.type === 'target' ? 'ተቀመጠ ግብ (Target)' : 'በዕጣ እቁብ'}
+                        {group.type === 'target' ? 'በተቀመጠ ዓማ (Target)' : 'በዕጣ እቁብ'}
                       </span>
                     </div>
-                    <p className="text-sm text-gray-500 mb-4">ሰብሳቢ፦ {group.admin?.name}</p>
+                    <p className="text-sm text-gray-500 mb-4">አስተዳዳሪ፡ {group.admin?.name}</p>
 
                     <div className="space-y-2 text-sm text-gray-600 mb-4">
                       <div className="flex justify-between">
@@ -366,23 +375,23 @@ const Dashboard = () => {
                       </div>
                       
                       <div className="flex justify-between">
-                        <span>{group.type === 'target' ? 'የሚሰበሰብ ግብ፦' : 'የዕጣው ጠቅላላ መጠን፦'}</span>
+                        <span>{group.type === 'target' ? 'የሚሰበሰብ ዓማ፡' : 'የዕጣው ጠቅላላ መጠን'}</span>
                         <span className="font-bold text-gray-800">{targetGoal} ብር</span>
                       </div>
 
                       {group.type === 'lottery' && (
                         <div className="flex justify-between text-blue-600 font-semibold bg-blue-50 px-2 py-1 rounded">
-                          <span>የዕጣ መውጫ ጊዜ፦</span>
+                          <span>የዕጣ ማውጫ ጊዜ፡</span>
                           <span>
                             {group.frequency === 'weekly' 
-                              ? `በየ 7 ቀን (${getDayName(group.drawDay)})` 
-                              : `በየ ${group.drawIntervalDays || 1} ቀን`}
+                              ? `በ 7 ቀን (${getDayName(group.drawDay)})` 
+                              : `በ ${group.drawIntervalDays || 1} ቀን`}
                           </span>
                         </div>
                       )}
                       
                       <div className="flex justify-between">
-                        <span>አባላት፦</span>
+                        <span>አባላት፡</span>
                         <span className="font-bold text-gray-800">{actualMembersCount} አባላት</span>
                       </div>
 
@@ -390,7 +399,7 @@ const Dashboard = () => {
                       <div className="mt-3">
                         <div className="flex justify-between text-xs font-semibold mb-1">
                           <span className="text-gray-600">እድገት (Progress)</span>
-                          <span className="text-blue-600">{progressPercent}% ተጠናቋል</span>
+                          <span className="text-blue-600">{progressPercent}% ተሳክቷል</span>
                         </div>
                         <div className="w-full bg-gray-200 rounded-full h-2.5 overflow-hidden">
                           <div 
@@ -416,7 +425,7 @@ const Dashboard = () => {
                           onClick={() => { setSelectedGroup(group); setShowPayModal(true); }}
                           className="w-1/2 bg-emerald-600 text-white py-2 rounded-lg hover:bg-emerald-700 font-medium text-sm flex items-center justify-center gap-1"
                         >
-                          <Wallet size={16} /> ክፍያ ፈጽም
+                          <Wallet size={16} /> ክፍያ ፈጸም
                         </button>
                       )}
                     </div>
@@ -441,7 +450,7 @@ const Dashboard = () => {
       {showCreateModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-xl p-6 w-full max-w-md max-h-[90vh] overflow-y-auto">
-            <h3 className="text-xl font-bold mb-4">አዲስ የእቁብ ቡድን ማቋቋሚያ</h3>
+            <h3 className="text-xl font-bold mb-4">አዲስ የእቁብ ቢሮ መመስረቻ</h3>
             <form onSubmit={handleCreateGroup} className="space-y-4">
               <div>
                 <label className="block text-sm font-medium">የእቁብ ስም</label>
@@ -450,7 +459,7 @@ const Dashboard = () => {
               <div>
                 <label className="block text-sm font-medium">የእቁብ ዓይነት</label>
                 <select className="w-full border p-2 rounded-lg mt-1" value={type} onChange={e => setType(e.target.value)}>
-                  <option value="target">በተቀመጠ ግብ (Target Goal)</option>
+                  <option value="target">በተቀመጠ ዓማ (Target Goal)</option>
                   <option value="lottery">በዕጣ የሚወጣ (Lottery)</option>
                 </select>
               </div>
@@ -461,7 +470,7 @@ const Dashboard = () => {
 
               <div>
                 <label className="block text-sm font-medium">
-                  {type === 'target' ? 'የመጨረሻ ግብ (Target Goal Amount)' : 'ጠቅላላ የዕጣ መጠን (Total Lottery Amount)'}
+                  {type === 'target' ? 'የመጀመሪያ ዓማ (Target Goal Amount)' : 'ጠቅላላ የዕጣ መጠን (Total Lottery Amount)'}
                 </label>
                 <input 
                   type="number" 
@@ -475,18 +484,18 @@ const Dashboard = () => {
 
               {type === 'lottery' && (
                 <div>
-                  <label className="block text-sm font-medium text-blue-700">ዕጣው በስንት ቀን ይውጣ? (የቀን ብዛት)</label>
+                  <label className="block text-sm font-medium text-blue-700">ዕጣው በስንት ቀን ይወጣል? (የቀን ብዛት)</label>
                   <select 
                     className="w-full border p-2 rounded-lg mt-1 bg-blue-50/50 border-blue-200 font-semibold"
                     value={drawIntervalDays} 
                     onChange={e => setDrawIntervalDays(e.target.value)}
                   >
-                    <option value={1}>በየ 1 ቀን (በቀን)</option>
-                    <option value={3}>በየ 3 ቀን</option>
-                    <option value={5}>በየ 5 ቀን</option>
-                    <option value={7}>በየ 7 ቀን (ሳምንታዊ)</option>
-                    <option value={15}>በየ 15 ቀን</option>
-                    <option value={30}>በየ 30 ቀን (ወርሃዊ)</option>
+                    <option value={1}>በ 1 ቀን (በቀን)</option>
+                    <option value={3}>በ 3 ቀን</option>
+                    <option value={5}>በ 5 ቀን</option>
+                    <option value={7}>በ 7 ቀን (ሳምንታዊ)</option>
+                    <option value={15}>በ 15 ቀን</option>
+                    <option value={30}>በ 30 ቀን (ወርሃዊ)</option>
                   </select>
                 </div>
               )}
@@ -502,7 +511,7 @@ const Dashboard = () => {
               {frequency === 'weekly' && (
                 <div className="bg-blue-50 p-3 rounded-lg border border-blue-200">
                   <label className="block text-sm font-medium text-blue-900 mb-1">
-                    ክፍያው የሚሰበሰብበት ቀን ይምረጡ፦
+                    ክፍያው የሚሰበሰብበት ቀን ይመርጡ
                   </label>
                   <select
                     className="w-full border border-blue-300 p-2 rounded-lg bg-white"
@@ -555,11 +564,11 @@ const Dashboard = () => {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-xl p-6 w-full max-w-md">
             <h3 className="text-xl font-bold mb-2">ክፍያ ማሰሪያ - {selectedGroup.title}</h3>
-            <p className="text-sm text-gray-600 mb-4">መጠን፦ <span className="font-bold">{selectedGroup.contributionAmount} ብር</span></p>
+            <p className="text-sm text-gray-600 mb-4">መጠን፡ <span className="font-bold">{selectedGroup.contributionAmount} ብር</span></p>
 
             <form onSubmit={handlePayment} className="space-y-4">
               <div>
-                <label className="block text-sm font-medium mb-1">የክፍያ መሠረገም ይምረጡ</label>
+                <label className="block text-sm font-medium mb-1">የክፍያ መሠረቻ ይምረጡ</label>
                 <div className="grid grid-cols-2 gap-2">
                   <button
                     type="button"
@@ -581,7 +590,7 @@ const Dashboard = () => {
               {paymentMethod === 'receipt' ? (
                 <div className="space-y-3 bg-gray-50 p-3 rounded-lg border">
                   <p className="text-xs text-gray-600">
-                    የአስተዳዳሪው የባንክ መረጃ፦ <br />
+                    የአስተዳዳሪው የባንክ መረጃ <br />
                     <span className="font-semibold">{selectedGroup.admin?.bankDetails?.bankName || 'CBE'}</span>: 
                     <span className="font-bold text-gray-800 ml-1">{selectedGroup.admin?.bankDetails?.accountNumber || '1000123456789'}</span>
                   </p>
@@ -607,7 +616,7 @@ const Dashboard = () => {
                 </div>
               ) : (
                 <p className="text-xs text-gray-500 bg-blue-50 p-3 rounded border border-blue-200">
-                  'ክፍያ ፈጽም' የሚለውን ሲጫኑ በቀጥታ ወደ Chapa ደህንነታማ የተጠበቀ የክፍያ ገጽ ይዛወራሉ።
+                  'ክፍያ ፈጸም' የሚለውን ሲጫኑ በቀጥታ ወደ Chapa ደህንነቱ የተጠበቀ የክፍያ ገጽ ይወስድዎታል።
                 </p>
               )}
 
@@ -621,10 +630,10 @@ const Dashboard = () => {
                   {isSubmittingPayment ? (
                     <>
                       <Loader2 size={18} className="animate-spin" />
-                      <span>ይበተናል...</span>
+                      <span>እየተከናወነ...</span>
                     </>
                   ) : (
-                    <span>ክፍያ ፈጽም</span>
+                    <span>ክፍያ ፈጸም</span>
                   )}
                 </button>
               </div>
