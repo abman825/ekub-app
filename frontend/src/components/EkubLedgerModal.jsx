@@ -11,7 +11,7 @@ const EkubLedgerModal = ({ isOpen, onClose, group, userRole }) => {
   const [currentGroup, setCurrentGroup] = useState(group);
   const [isDrawing, setIsDrawing] = useState(false);
 
-  // 🔍 የፍለጋ እና የማጣሪያ ስቴቶች (Search & Filter States)
+  // 🔍 የፍለጋ እና የማጣሪያ ስንቶች (Search & Filter States)
   const [statusFilter, setStatusFilter] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -28,7 +28,7 @@ const EkubLedgerModal = ({ isOpen, onClose, group, userRole }) => {
       const { data } = await API.get(`/ekub/${group._id}`);
       setCurrentGroup(data);
     } catch (err) {
-      console.error('የእቁብ መረጃን ማምጣት አልተቻለም', err);
+      console.error('የእቁብ መረጃን ማጥመድ አልተቻለም', err);
       setCurrentGroup(group);
     }
   };
@@ -43,7 +43,7 @@ const EkubLedgerModal = ({ isOpen, onClose, group, userRole }) => {
       const { data } = await API.get(endpoint);
       setLedger(data);
     } catch (err) {
-      console.error('የእቁብ ደብተሩን ማምጣት አልተቻለም', err);
+      console.error('የእቁብ ደፍተርን ማጥመድ አልተቻለም', err);
     } finally {
       setLoading(false);
     }
@@ -57,7 +57,7 @@ const EkubLedgerModal = ({ isOpen, onClose, group, userRole }) => {
     return m._id ? m._id.toString() !== adminId?.toString() : false;
   });
 
-  // አድሚን ሲፈልግ አባላቱን በስም ማጣሪያ (Filtered Member Buttons for Admin)
+  // አዲስ ሰራሽ አባላትን በስም ማጣሪያ (Filtered Member Buttons for Admin)
   const filteredMembersList = membersList.filter(m => {
     const nameMatches = m.name?.toLowerCase().includes(searchTerm.toLowerCase());
     const phoneMatches = m.phone?.includes(searchTerm);
@@ -77,7 +77,7 @@ const EkubLedgerModal = ({ isOpen, onClose, group, userRole }) => {
 
   const handleDrawLottery = async () => {
     if (membersList.length === 0) {
-      return alert('እቁቡ ውስጥ አባላት የሉም!');
+      return alert('እቁብ ውስጥ አባላት የሉም!');
     }
 
     setIsDrawing(true);
@@ -98,7 +98,7 @@ const EkubLedgerModal = ({ isOpen, onClose, group, userRole }) => {
         }
       } catch (err) {
         console.error('አሸናፊውን መመዝገብ አልተቻለም', err);
-        alert(err.response?.data?.message || 'እጣ ማውጣት አልተቻለም');
+        alert(err.response?.data?.message || 'ዕጣ ማውጣት አልተቻለም');
       } finally {
         setIsDrawing(false);
       }
@@ -107,7 +107,7 @@ const EkubLedgerModal = ({ isOpen, onClose, group, userRole }) => {
 
   const handleExportExcel = () => {
     const excelData = filteredPayments.map((item, index) => ({
-      'ተራ ቁጥር': index + 1,
+      'ተረ ቁጥር': index + 1,
       'የአባል ስም': item.member?.name || 'N/A',
       'ስልክ ቁጥር': item.member?.phone || 'N/A',
       'የክፍያ መጠን (ብር)': item.amount,
@@ -118,7 +118,7 @@ const EkubLedgerModal = ({ isOpen, onClose, group, userRole }) => {
 
     const worksheet = XLSX.utils.json_to_sheet(excelData);
     const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "የክፍያ ደብተር");
+    XLSX.utils.book_append_sheet(workbook, worksheet, "የክፍያ ደፍተር");
     
     XLSX.writeFile(workbook, `${currentGroup.title}_Ledger_Report.xlsx`);
   };
@@ -145,7 +145,7 @@ const EkubLedgerModal = ({ isOpen, onClose, group, userRole }) => {
 
   const displayPayments = processedPayments.reverse();
 
-  // 🔍 የክፍያዎችን በ Status የማጣሪያ ሎጂክ
+  // 🔍 ክፍያዎችን በ Status የማጣሪያ ሎጂክ
   const filteredPayments = displayPayments.filter((item) => {
     return statusFilter === 'all' || item.status === statusFilter;
   });
@@ -164,19 +164,6 @@ const EkubLedgerModal = ({ isOpen, onClose, group, userRole }) => {
   const remainingAmount = Math.max(0, goalAmount - totalPaid);
 
   const winnerObj = currentGroup.latestWinner?.member;
-  const winnersHistory = currentGroup.winnersHistory || [];
-
-  const allWinners = [...winnersHistory];
-  if (winnerObj) {
-    const winnerId = winnerObj._id || winnerObj;
-    const exists = allWinners.some(w => {
-      const existingId = w.member?._id || w.member;
-      return existingId?.toString() === winnerId?.toString();
-    });
-    if (!exists) {
-      allWinners.push({ member: winnerObj, wonAt: currentGroup.latestWinner?.wonAt });
-    }
-  }
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
@@ -185,9 +172,9 @@ const EkubLedgerModal = ({ isOpen, onClose, group, userRole }) => {
         {/* Header */}
         <div className="flex justify-between items-center border-b pb-4 mb-4 no-print">
           <div>
-            <h3 className="text-xl font-bold text-gray-800">የእቁብ ደብተር - {currentGroup.title}</h3>
+            <h3 className="text-xl font-bold text-gray-800">የእቁብ ደፍተር - {currentGroup.title}</h3>
             <p className="text-sm text-gray-500">
-              {currentGroup.type === 'lottery' ? `🎲 በዕጣ የሚወጣ (በየ ${currentGroup.drawIntervalDays || 1} ቀኑ)` : '🎯 የተቀመጠ ግብ (Target)'}
+              {currentGroup.type === 'lottery' ? `🎲 በዕጣ የሚወጣ (በ ር ${currentGroup.drawIntervalDays || 1} ቀናት)` : '🎯 በተቀመጠ ዓማ (Target)'}
             </p>
           </div>
           
@@ -212,6 +199,33 @@ const EkubLedgerModal = ({ isOpen, onClose, group, userRole }) => {
           </div>
         </div>
 
+        {/* 🏆 ያለፉ ዕጣ አሸናፊዎች (በቅደም ተከተል የተደደረደሩ) */}
+        {currentGroup?.type === 'lottery' && currentGroup?.winnersHistory && currentGroup.winnersHistory.length > 0 && (
+          <div className="mb-6 bg-green-50/60 border border-green-200 rounded-xl p-4">
+            <h4 className="text-sm font-bold text-green-900 mb-3 flex items-center gap-2">
+              🏆 ያለፉ ዕጣ አሸናፊዎች (በቅደም ተከተል)
+            </h4>
+            <div className="space-y-2">
+              {currentGroup.winnersHistory.map((winner, index) => (
+                <div 
+                  key={index} 
+                  className="flex justify-between items-center bg-white p-2.5 rounded-lg border border-green-100 text-xs shadow-sm"
+                >
+                  <div className="flex items-center gap-2">
+                    <span className="bg-green-600 text-white font-bold rounded-full w-5 h-5 flex items-center justify-center text-[10px]">
+                      {index + 1}
+                    </span>
+                    <span className="font-bold text-gray-800">{winner.name || winner.phone}</span>
+                  </div>
+                  <span className="text-gray-500 font-medium">
+                    {winner.wonAt ? new Date(winner.wonAt).toLocaleDateString() : `ዙር ${index + 1}`}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         <div className="print-area space-y-4">
           {/* Latest Winner Banner */}
           {currentGroup.type === 'lottery' && winnerObj && (
@@ -230,9 +244,9 @@ const EkubLedgerModal = ({ isOpen, onClose, group, userRole }) => {
             <div className="mb-4 bg-gradient-to-r from-purple-50 to-indigo-50 p-3 rounded-xl border border-purple-200 flex flex-col sm:flex-row justify-between items-center gap-3 no-print">
               <div>
                 <h4 className="font-bold text-purple-900 flex items-center gap-2 text-sm">
-                  <Gift size={16} /> የዕጣ ማውጫ ሲስተም
+                  <Gift size={16} /> የዕጣ ማውጫ ስርዓት
                 </h4>
-                <p className="text-xs text-purple-700">መደገሚያ ጊዜ፦ በየ {currentGroup.drawIntervalDays || 1} ቀኑ | አባላት፦ {membersList.length}</p>
+                <p className="text-xs text-purple-700">መደጋገሚያ ጊዜ፡ በ {currentGroup.drawIntervalDays || 1} ቀናት | አባላት፡ {membersList.length}</p>
               </div>
 
               <button
@@ -246,14 +260,14 @@ const EkubLedgerModal = ({ isOpen, onClose, group, userRole }) => {
           )}
 
           {loading ? (
-            <p className="text-center py-8 text-gray-500">መረጃው በመጫን ላይ ነው...</p>
+            <p className="text-center py-8 text-gray-500">መረጃ በመጫን ላይ ነው...</p>
           ) : (
             <div>
-              {/* 🔑 ለአድሚን ብቻ የሚታይ የአባላት ፍለጋ እና መምረጫ ክፍል */}
+              {/* 🔑 ለአድሚን ብቻ የሚታይ የአባል ፍለጋ እና መምረጫ ክፍል */}
               {userRole === 'admin' && (
                 <div className="mb-5 bg-gray-50 p-3 rounded-xl border no-print space-y-3">
                   <div className="flex justify-between items-center">
-                    <h4 className="text-xs font-bold text-gray-700">የአባል ደብተር ለመክፈት አባል ይምረጡ፦</h4>
+                    <h4 className="text-xs font-bold text-gray-700">የአባል ደፍተር ለማየት አባል ይምረጡ</h4>
                     
                     {/* Status Filter Dropdown */}
                     <div className="flex items-center gap-1.5">
@@ -264,29 +278,29 @@ const EkubLedgerModal = ({ isOpen, onClose, group, userRole }) => {
                         className="text-[11px] border border-gray-300 rounded-lg px-2 py-1 bg-white focus:outline-none focus:ring-1 focus:ring-blue-500 font-medium"
                       >
                         <option value="all">ሁሉንም ክፍያዎች</option>
-                        <option value="approved">የጸደቁ (Approved)</option>
+                        <option value="approved">የጸደቀ (Approved)</option>
                         <option value="pending">በመጠባበቅ ላይ (Pending)</option>
-                        <option value="rejected">ውድቅ የተደረጉ (Rejected)</option>
+                        <option value="rejected">ውድቅ የተደረገ (Rejected)</option>
                       </select>
                     </div>
                   </div>
 
-                  {/* ለአድሚን የአባላት መፈለጊያ ሳጥን (Search Input) */}
+                  {/* ለአድሚን የአባል ማሻሻያ ሳጥን (Search Input) */}
                   <div className="relative">
                     <Search size={14} className="absolute left-2.5 top-2.5 text-gray-400" />
                     <input
                       type="text"
-                      placeholder="አባል በስም ወይም በስልክ ቁጥር ፈልግ..."
+                      placeholder="አባል በስም ወይም በስልክ ቁጥር ፍለጋ..."
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
                       className="w-full pl-8 pr-3 py-1.5 text-xs border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white"
                     />
                   </div>
 
-                  {/* በፍለጋው መሰረት የሚወጡ የአባላት ቁልፎች */}
+                  {/* በፍለጋው መሰረት የሚወጣ የአባል ቅርንጫፎች */}
                   <div className="flex flex-wrap gap-2 max-h-32 overflow-y-auto">
                     {filteredMembersList.length === 0 ? (
-                      <p className="text-xs text-gray-400 italic">ምንም የተፈለገው አይነት አባል አልተገኘም።</p>
+                      <p className="text-xs text-gray-400 italic">ምንም የተፈለገ ዓይነት አባል አልተገኘም።</p>
                     ) : (
                       filteredMembersList.map((m) => (
                         <button
@@ -332,7 +346,7 @@ const EkubLedgerModal = ({ isOpen, onClose, group, userRole }) => {
               {/* Table */}
               {userRole === 'admin' && !selectedMember ? (
                 <div className="text-center py-8 bg-gray-50 rounded-lg border border-dashed text-gray-500 text-xs no-print">
-                  👈 እባክዎን የእቁብን አባል ደብተር ለማየት ከላይ ካሉት አባላት አንዱን ይምረጡ።
+                  👈 እባክዎን የእቁብን አባል ደፍተር ለማየት ከላይ ካሉት አባላት አንዱን ይምረጡ።
                 </div>
               ) : (
                 <div className="overflow-x-auto border rounded-lg">
@@ -377,7 +391,7 @@ const EkubLedgerModal = ({ isOpen, onClose, group, userRole }) => {
                             <td className="p-2.5">
                               {item.status === 'approved' && (
                                 <span className="flex items-center gap-1 text-green-600 font-medium text-[11px] bg-green-50 px-2 py-0.5 rounded-full w-fit">
-                                  <CheckCircle size={12} /> ተከፍሏል
+                                  <CheckCircle size={12} /> ተረጋግጧል
                                 </span>
                               )}
                               {item.status === 'pending' && (
