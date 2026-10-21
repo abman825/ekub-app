@@ -347,7 +347,7 @@ const Dashboard = () => {
           </div>
         ) : (
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {{groups.map((group) => {
+            {groups.map((group) => {
   const isMember = group.members.some(m => m._id === user?._id);
   const isAdmin = user?.role === 'admin';
   const adminId = group.admin?._id || group.admin;
