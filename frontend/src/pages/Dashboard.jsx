@@ -254,61 +254,63 @@ const Dashboard = () => {
             <h2 className="text-lg font-bold text-gray-800 mb-4">የሚጠበቁ የክፍያ ደረሰኞች ({pendingPayments.length})</h2>
             <div className="space-y-4">
               {pendingPayments.map((p) => (
-                <div key={p._id} className="flex justify-between items-center p-4 border rounded-lg bg-white shadow-sm gap-4">
-                  
-                  <div className="flex items-center gap-4">
-                    {p.receiptUrl ? (
-                      <div 
-                        onClick={() => setPreviewImage(p.receiptUrl)}
-                        className="cursor-pointer group relative"
-                        title="በግልጽ ለማየት ክሊክ"
-                      >
-                        <img 
-                          src={p.receiptUrl} 
-                          alt="የባንክ ደረሰኝ" 
-                          className="w-20 h-20 object-cover rounded-lg border group-hover:opacity-90 shadow-sm transition"
-                        />
-                        <span className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 rounded-lg flex items-center justify-center text-white text-xs font-bold transition">
-                          🔍 ማግኘት
-                        </span>
-                      </div>
-                    ) : (
-                      <div className="w-20 h-20 bg-gray-100 rounded-lg border flex items-center justify-center text-xs text-gray-400 text-center p-1">
-                        ምስል የለውም
-                      </div>
-                    )}
+                <div key={p._id} className="flex flex-col sm:flex-row justify-between items-start sm:items-center p-4 border rounded-lg bg-white shadow-sm gap-4">
+  
+  {/* የደረሰኝ ምስል እና መረጃዎች */}
+  <div className="flex items-center gap-4 w-full sm:w-auto">
+    {p.receiptUrl ? (
+      <div 
+        onClick={() => setPreviewImage(p.receiptUrl)}
+        className="cursor-pointer group relative flex-shrink-0"
+        title="በግልጽ ለማየት ክሊክ"
+      >
+        <img 
+          src={p.receiptUrl} 
+          alt="የባንክ ደረሰኝ" 
+          className="w-20 h-20 object-cover rounded-lg border group-hover:opacity-90 shadow-sm transition"
+        />
+        <span className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 rounded-lg flex items-center justify-center text-white text-xs font-bold transition">
+          🔍 ማግኘት
+        </span>
+      </div>
+    ) : (
+      <div className="w-20 h-20 bg-gray-100 rounded-lg border flex items-center justify-center text-xs text-gray-400 text-center p-1 flex-shrink-0">
+        ምስል የለውም
+      </div>
+    )}
 
-                    <div>
-                      <p className="font-bold text-gray-800">{p.member?.name} ({p.member?.phone})</p>
-                      <p className="text-sm text-gray-600">
-                        እቁብ፡ <span className="font-semibold">{p.ekubGroup?.title}</span> | መጠን፡ <span className="font-semibold text-green-600">{p.amount} ብር</span>
-                      </p>
-                      
-                      {p.receiptUrl && (
-                        <button 
-                          onClick={() => setPreviewImage(p.receiptUrl)}
-                          className="text-xs text-blue-600 font-semibold underline mt-1 hover:text-blue-800 block text-left"
-                        >
-                          🔍 ምስሉን አስፋ እዚህ ክሊክ
-                        </button>
-                      )}
-                      
-                      {p.transactionRef && (
-                        <p className="text-xs text-gray-600 font-semibold mt-1">Ref No: {p.transactionRef}</p>
-                      )}
-                    </div>
-                  </div>
+    <div>
+      <p className="font-bold text-gray-800">{p.member?.name} ({p.member?.phone})</p>
+      <p className="text-sm text-gray-600">
+        እቁብ፡ <span className="font-semibold">{p.ekubGroup?.title}</span> | መጠን፡ <span className="font-semibold text-green-600">{p.amount} ብር</span>
+      </p>
+      
+      {p.receiptUrl && (
+        <button 
+          onClick={() => setPreviewImage(p.receiptUrl)}
+          className="text-xs text-blue-600 font-semibold underline mt-1 hover:text-blue-800 block text-left"
+        >
+          🔍 ምስሉን አስፋ እዚህ ክሊክ
+        </button>
+      )}
+      
+      {p.transactionRef && (
+        <p className="text-xs text-gray-600 font-semibold mt-1">Ref No: {p.transactionRef}</p>
+      )}
+    </div>
+  </div>
 
-                  <div className="flex flex-col gap-2 w-full sm:w-36">
+  {/* የ «አጽድቅ» እና «ውድቅ አድርግ» በተኖች (በሞባይል ከታች፣ በኮምፒውተር ጎን ለጎን እንዲሆኑ) */}
+  <div className="flex sm:flex-row gap-2 w-full sm:w-auto">
     <button 
       onClick={() => handleApprove(p._id, 'approved')} 
-      className="w-full flex items-center justify-center gap-1 bg-green-600 text-white px-3 py-1.5 rounded-lg text-sm hover:bg-green-700 font-medium transition shadow-sm"
+      className="flex-1 sm:flex-none flex items-center justify-center gap-1 bg-green-600 text-white px-3 py-2 rounded-lg text-sm hover:bg-green-700 font-medium transition"
     >
       <CheckCircle size={16} /> አጽድቅ
     </button>
     <button 
       onClick={() => handleApprove(p._id, 'rejected')} 
-      className="w-full flex items-center justify-center gap-1 bg-red-600 text-white px-3 py-1.5 rounded-lg text-sm hover:bg-red-700 font-medium transition shadow-sm"
+      className="flex-1 sm:flex-none flex items-center justify-center gap-1 bg-red-600 text-white px-3 py-2 rounded-lg text-sm hover:bg-red-700 font-medium transition"
     >
       <XCircle size={16} /> ውድቅ አድርግ
     </button>
