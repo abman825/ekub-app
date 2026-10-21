@@ -172,8 +172,22 @@ const Dashboard = () => {
       alert(err.response?.data?.message || 'አባል መመዝገብ አልተቻለም');
     }
   };
+const handlePayment = async (e) => {
+    e.preventDefault();
 
-  const handlePayment = async (e) => {
+    // 🔴 እድገቱ (Progress) 100% ከሆነ ክፍያውን ማገድ
+    const adminId = selectedGroup?.admin?._id || selectedGroup?.admin;
+    const actualMembersCount = selectedGroup?.members?.filter(m => (m._id || m).toString() !== adminId?.toString()).length || 1;
+    const targetGoal = selectedGroup?.targetGoal || 10000;
+    const totalExpectedGoal = selectedGroup?.type === 'lottery' ? targetGoal : (targetGoal * actualMembersCount);
+    const estimatedCollected = selectedGroup?.totalCollected || 0;
+
+    if (estimatedCollected >= totalExpectedGoal) {
+      setIsSubmittingPayment(false);
+      return alert('ይህ እቁብ ሙሉ በሙሉ ተጠናቋል! ከዚህ በላይ ክፍያ መክፈል አይቻልም።');
+    }
+
+   
     e.preventDefault();
     setIsSubmittingPayment(true);
 
