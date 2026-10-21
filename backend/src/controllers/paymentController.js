@@ -51,7 +51,9 @@ const initializeChapaPayment = async (req, res) => {
       ? req.user.email 
       : `user_${req.user.phone}@gmail.com`;
 
+    // 🌐 dynamic URLs ከ environment variables ወይም fallback
     const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+    const backendUrl = process.env.BACKEND_URL || 'https://ekub-app.onrender.com';
 
     const response = await axios.post(
       'https://api.chapa.co/v1/transaction/initialize',
@@ -62,7 +64,8 @@ const initializeChapaPayment = async (req, res) => {
         first_name: req.user.name || 'Member',
         last_name: 'Ekub',
         tx_ref: tx_ref,
-        callback_url: `http://localhost:5000/api/payment/chapa-webhook`,
+        // 👈 በኮድ ውስጥ localhost የነበረው በ dynamic backendUrl ተተክቷል
+        callback_url: `${backendUrl}/api/payment/chapa-webhook`,
         return_url: `${frontendUrl}/dashboard?tx_ref=${tx_ref}`
       },
       {
@@ -73,26 +76,17 @@ const initializeChapaPayment = async (req, res) => {
       }
     );
 
-    if (response.data && response.data.status === 'success') {
-      await Contribution.create({
-        ekubGroup: ekubGroupId,
-        member: req.user._id,
-        amount: Number(amount),
-        paymentMethod: 'chapa',
-        transactionRef: tx_ref,
-        status: 'pending'
-      });
-
-      return res.json({ checkout_url: response.data.data.checkout_url });
-    } else {
-      return res.status(400).json({ message: 'Chapa ክፍያን ማስጀመር አልተቻለም።' });
-    }
+    res.status(200).json(response.data);
   } catch (error) {
-    console.error("Chapa Initialization Error:", error.response?.data || error.message);
-    const errorMsg = error.response?.data?.message || error.message || 'የ Chapa ሰርቨር ስህተት አጋጥሟል!';
-    res.status(500).json({ message: errorMsg });
+    console.error("CHAPA INIT ERROR:", error.response?.data || error.message);
+    res.status(500).json({ 
+      message: 'የ Chapa ክፍያ ማስጨረስ አልተቻለም!', 
+      error: error.response?.data || error.message 
+    });
   }
 };
+
+
 
 // 3. Chapa Verifikatioun (Latest or by tx_ref)
 const verifyChapaPayment = async (req, res) => {
