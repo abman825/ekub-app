@@ -347,17 +347,30 @@ const Dashboard = () => {
           </div>
         ) : (
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {groups.map((group) => {
-              const isMember = group.members.some(m => m._id === user?._id);
-              const isAdmin = user?.role === 'admin';
-              const adminId = group.admin?._id || group.admin;
-              const actualMembersCount = group.members.filter(m => (m._id || m).toString() !== adminId.toString()).length;
+            {{groups.map((group) => {
+  const isMember = group.members.some(m => m._id === user?._id);
+  const isAdmin = user?.role === 'admin';
+  const adminId = group.admin?._id || group.admin;
+  
+  // 1. ትክክለኛው የአባላት ብዛት (ከአስተዳዳሪው ውጪ)
+  const actualMembers = group.members.filter(m => (m._id || m).toString() !== adminId.toString());
+  const membersCount = actualMembers.length || 1;
 
-              const targetGoal = group.targetGoal || 10000;
-              const estimatedCollected = group.totalCollected || 0;
-              const progressPercent = Math.min(100, Math.round((estimatedCollected / targetGoal) * 100));
+  const targetGoal = group.targetGoal || 10000;
+  
+  // 2. አጠቃላይ የሚጠበቀው ገንዘብ (ለዕጣ እቁብ Target Goal ራሱ ነው፣ ለሌላው በ አባላት ብዛት ይባዛል)
+  const totalExpectedGoal = group.type === 'lottery' ? targetGoal : (targetGoal * membersCount);
 
-              return (
+  // 3. የተሰበሰበው ትክክለኛ ገንዘብ
+  const estimatedCollected = group.totalCollected || 0;
+
+  // 🔴 4. ትክክለኛው የ % እድገት ስሌት
+  const progressPercent = totalExpectedGoal > 0 
+    ? Math.min(100, Math.round((estimatedCollected / totalExpectedGoal) * 100))
+    : 0;
+
+  return (
+    // ... ቀጣዩ የኮድ ክፍሎች ...
                 <div key={group._id} className="bg-white rounded-xl shadow-sm border p-5 flex flex-col justify-between">
                   <div>
                     <div className="flex justify-between items-start mb-3">
