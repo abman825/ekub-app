@@ -26,7 +26,7 @@ const createEkubGroup = async (req, res) => {
   }
 };
 
-// 2. የእቁብ ቢሮዎችን ማግኘት (በተጠቃሚው ሰአት እና ፍጥነት)
+// 2. የእቁብ ቢሮዎችን ማግኘት (በተጠቃሚው ሰዓት እና ፍጥነት)
 const getEkubGroups = async (req, res) => {
   try {
     let groups;
@@ -95,8 +95,7 @@ const addMemberToGroup = async (req, res) => {
   }
 };
 
-// 5. ዕጣ አሸናፊን መምረጥ እና ዳታቤዝ ላይ ሐሪፍ ትክክለኛነት ማረጋገጫ (Admin Only) + Telegram Notification
-// 5. ዕጣ አሸናፊን መምረጥ እና የቀን ገደብ ማረጋገጫ (Admin Only)
+// 5. ዕጣ አሸናፊን መምረጥ እና የቀን ገደብ ማረጋገጫ (Admin Only) + Telegram Notification
 const drawLotteryWinner = async (req, res) => {
   try {
     const { groupId } = req.body;
@@ -106,7 +105,7 @@ const drawLotteryWinner = async (req, res) => {
       return res.status(404).json({ message: 'እቁብ አልተገኘም!' });
     }
 
-    // 🔴 የቀን ገደብ ማረጋገጫ (Validation: በየ 7 ቀኑ ወይም በተቀመጠው drawIntervalDays አንዴ ብቻ እንዲወጣ)
+    // 🔴 የቀን ገደብ ማረጋገጫ (Validation: በየተቀመጠው drawIntervalDays አንዴ ብቻ እንዲወጣ)
     if (group.latestWinner && group.latestWinner.wonAt) {
       const lastWonDate = new Date(group.latestWinner.wonAt);
       const today = new Date();
@@ -117,8 +116,9 @@ const drawLotteryWinner = async (req, res) => {
       const requiredInterval = group.type === 'lottery' ? (group.drawIntervalDays || 1) : 1;
 
       if (diffInDays < requiredInterval) {
+        const remainingDays = requiredInterval - diffInDays;
         return res.status(400).json({ 
-          message: `የዚህ ዙር ዕጣ ተወጥቷል! የሚቀጥለው ዕጣ ከ ${requiredInterval - diffInDays} ቀን በኋላ መውጣት ይችላል።` 
+          message: `የዚህ ዙር ዕጣ ተወጥቷል! የሚቀጥለው ዕጣ ከ ${remainingDays} ቀን በኋላ መውጣት ይችላል።` 
         });
       }
     }
@@ -126,8 +126,6 @@ const drawLotteryWinner = async (req, res) => {
     if (!group.members || group.members.length === 0) {
       return res.status(400).json({ message: 'እቁብ ውስጥ አባላት የሉም!' });
     }
-
-    // (ቀጣዩ የዕጣ ማውጣት ኮድህ ይቀጥላል...)
 
     const adminId = group.admin?.toString();
     const activeMembers = group.members.filter(m => m._id.toString() !== adminId);
@@ -154,7 +152,7 @@ const drawLotteryWinner = async (req, res) => {
     
     let eligibleMembers = activeMembers.filter(m => !previousWinnerIds.includes(m._id.toString()));
     
-    // ሁሉም አባላት ካሸነፉ ታሪኩን ራሱን ጀምሮ እንደገና ዑደቱን መቀጠል ከፈለጉ
+    // ሁሉም አባላት ካሸነፉ ታሪኩን ራሱን ጀምሮ እንደገና ዑደቱን መቀጠል
     if (eligibleMembers.length === 0) {
       group.winnersHistory = [];
       eligibleMembers = activeMembers;
