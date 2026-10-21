@@ -102,7 +102,7 @@ const Dashboard = () => {
       const { data } = await API.get('/ekub');
       setGroups(data);
     } catch (err) {
-      console.error('እቁቦችን ማጥመድ አዳልተቻለም', err);
+      console.error('እቁቦችን ማጥመድ አልተቻለም', err);
     } finally {
       setLoading(false);
     }
@@ -184,7 +184,6 @@ const Dashboard = () => {
           amount: selectedGroup.contributionAmount
         });
         
-        // 🛠️ FIX: Chapa checkout URL በትክክል እንዲነበብ ተደረገ
         const checkoutUrl = data?.data?.checkout_url || data?.checkout_url;
 
         if (checkoutUrl) {
@@ -255,68 +254,64 @@ const Dashboard = () => {
             <div className="space-y-4">
               {pendingPayments.map((p) => (
                 <div key={p._id} className="flex flex-col sm:flex-row justify-between items-start sm:items-center p-4 border rounded-lg bg-white shadow-sm gap-4">
-  
-  {/* የደረሰኝ ምስል እና መረጃዎች */}
-  <div className="flex items-center gap-4 w-full sm:w-auto">
-    {p.receiptUrl ? (
-      <div 
-        onClick={() => setPreviewImage(p.receiptUrl)}
-        className="cursor-pointer group relative flex-shrink-0"
-        title="በግልጽ ለማየት ክሊክ"
-      >
-        <img 
-          src={p.receiptUrl} 
-          alt="የባንክ ደረሰኝ" 
-          className="w-20 h-20 object-cover rounded-lg border group-hover:opacity-90 shadow-sm transition"
-        />
-        <span className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 rounded-lg flex items-center justify-center text-white text-xs font-bold transition">
-          🔍 ማግኘት
-        </span>
-      </div>
-    ) : (
-      <div className="w-20 h-20 bg-gray-100 rounded-lg border flex items-center justify-center text-xs text-gray-400 text-center p-1 flex-shrink-0">
-        ምስል የለውም
-      </div>
-    )}
+                  <div className="flex items-center gap-4 w-full sm:w-auto">
+                    {p.receiptUrl ? (
+                      <div 
+                        onClick={() => setPreviewImage(p.receiptUrl)}
+                        className="cursor-pointer group relative flex-shrink-0"
+                        title="በግልጽ ለማየት ክሊክ"
+                      >
+                        <img 
+                          src={p.receiptUrl} 
+                          alt="የባንክ ደረሰኝ" 
+                          className="w-20 h-20 object-cover rounded-lg border group-hover:opacity-90 shadow-sm transition"
+                        />
+                        <span className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 rounded-lg flex items-center justify-center text-white text-xs font-bold transition">
+                          🔍 ማግኘት
+                        </span>
+                      </div>
+                    ) : (
+                      <div className="w-20 h-20 bg-gray-100 rounded-lg border flex items-center justify-center text-xs text-gray-400 text-center p-1 flex-shrink-0">
+                        ምስል የለውም
+                      </div>
+                    )}
 
-    <div>
-      <p className="font-bold text-gray-800">{p.member?.name} ({p.member?.phone})</p>
-      <p className="text-sm text-gray-600">
-        እቁብ፡ <span className="font-semibold">{p.ekubGroup?.title}</span> | መጠን፡ <span className="font-semibold text-green-600">{p.amount} ብር</span>
-      </p>
-      
-      {p.receiptUrl && (
-        <button 
-          onClick={() => setPreviewImage(p.receiptUrl)}
-          className="text-xs text-blue-600 font-semibold underline mt-1 hover:text-blue-800 block text-left"
-        >
-          🔍 ምስሉን አስፋ እዚህ ክሊክ
-        </button>
-      )}
-      
-      {p.transactionRef && (
-        <p className="text-xs text-gray-600 font-semibold mt-1">Ref No: {p.transactionRef}</p>
-      )}
-    </div>
-  </div>
+                    <div>
+                      <p className="font-bold text-gray-800">{p.member?.name} ({p.member?.phone})</p>
+                      <p className="text-sm text-gray-600">
+                        እቁብ፡ <span className="font-semibold">{p.ekubGroup?.title}</span> | መጠን፡ <span className="font-semibold text-green-600">{p.amount} ብር</span>
+                      </p>
+                      
+                      {p.receiptUrl && (
+                        <button 
+                          onClick={() => setPreviewImage(p.receiptUrl)}
+                          className="text-xs text-blue-600 font-semibold underline mt-1 hover:text-blue-800 block text-left"
+                        >
+                          🔍 ምስሉን አስፋ እዚህ ክሊክ
+                        </button>
+                      )}
+                      
+                      {p.transactionRef && (
+                        <p className="text-xs text-gray-600 font-semibold mt-1">Ref No: {p.transactionRef}</p>
+                      )}
+                    </div>
+                  </div>
 
-  {/* የ «አጽድቅ» እና «ውድቅ አድርግ» በተኖች (በሞባይል ከታች፣ በኮምፒውተር ጎን ለጎን እንዲሆኑ) */}
-  <div className="flex sm:flex-row gap-2 w-full sm:w-auto">
-    <button 
-      onClick={() => handleApprove(p._id, 'approved')} 
-      className="flex-1 sm:flex-none flex items-center justify-center gap-1 bg-green-600 text-white px-3 py-2 rounded-lg text-sm hover:bg-green-700 font-medium transition"
-    >
-      <CheckCircle size={16} /> አጽድቅ
-    </button>
-    <button 
-      onClick={() => handleApprove(p._id, 'rejected')} 
-      className="flex-1 sm:flex-none flex items-center justify-center gap-1 bg-red-600 text-white px-3 py-2 rounded-lg text-sm hover:bg-red-700 font-medium transition"
-    >
-      <XCircle size={16} /> ውድቅ አድርግ
-    </button>
-  </div>
-
-</div>
+                  <div className="flex flex-col gap-2 w-full sm:w-36">
+                    <button 
+                      onClick={() => handleApprove(p._id, 'approved')} 
+                      className="w-full flex items-center justify-center gap-1 bg-green-600 text-white px-3 py-1.5 rounded-lg text-sm hover:bg-green-700 font-medium transition shadow-sm"
+                    >
+                      <CheckCircle size={16} /> አጽድቅ
+                    </button>
+                    <button 
+                      onClick={() => handleApprove(p._id, 'rejected')} 
+                      className="w-full flex items-center justify-center gap-1 bg-red-600 text-white px-3 py-1.5 rounded-lg text-sm hover:bg-red-700 font-medium transition shadow-sm"
+                    >
+                      <XCircle size={16} /> ውድቅ አድርግ
+                    </button>
+                  </div>
+                </div>
               ))}
             </div>
           </div>
@@ -348,29 +343,28 @@ const Dashboard = () => {
         ) : (
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
             {groups.map((group) => {
-  const isMember = group.members.some(m => m._id === user?._id);
-  const isAdmin = user?.role === 'admin';
-  const adminId = group.admin?._id || group.admin;
-  
-  // 1. ትክክለኛው የአባላት ብዛት (ከአስተዳዳሪው ውጪ)
-  const actualMembers = group.members.filter(m => (m._id || m).toString() !== adminId.toString());
-  const membersCount = actualMembers.length || 1;
+              const isMember = group.members.some(m => m._id === user?._id);
+              const isAdmin = user?.role === 'admin';
+              const adminId = group.admin?._id || group.admin;
+              
+              // 1. ትክክለኛው የአባላት ብዛት (ከአስተዳዳሪው ውጪ)
+              const actualMembers = group.members.filter(m => (m._id || m).toString() !== adminId.toString());
+              const membersCount = actualMembers.length || 1;
 
-  const targetGoal = group.targetGoal || 10000;
-  
-  // 2. አጠቃላይ የሚጠበቀው ገንዘብ (ለዕጣ እቁብ Target Goal ራሱ ነው፣ ለሌላው በ አባላት ብዛት ይባዛል)
-  const totalExpectedGoal = group.type === 'lottery' ? targetGoal : (targetGoal * membersCount);
+              const targetGoal = group.targetGoal || 10000;
+              
+              // 2. አጠቃላይ የሚጠበቀው ገንዘብ (ለዕጣ እቁብ Target Goal ራሱ ነው፣ ለሌላው በአባላት ብዛት ይባዛል)[cite: 8]
+              const totalExpectedGoal = group.type === 'lottery' ? targetGoal : (targetGoal * membersCount);
 
-  // 3. የተሰበሰበው ትክክለኛ ገንዘብ
-  const estimatedCollected = group.totalCollected || 0;
+              // 3. የተሰበሰበው ትክክለኛው ገንዘብ[cite: 8]
+              const estimatedCollected = group.totalCollected || 0;
 
-  // 🔴 4. ትክክለኛው የ % እድገት ስሌት
-  const progressPercent = totalExpectedGoal > 0 
-    ? Math.min(100, Math.round((estimatedCollected / totalExpectedGoal) * 100))
-    : 0;
+              // 🔴 4. ትክክለኛው የ % እድገት ስሌት[cite: 8]
+              const progressPercent = totalExpectedGoal > 0 
+                ? Math.min(100, Math.round((estimatedCollected / totalExpectedGoal) * 100))
+                : 0;
 
-  return (
-    // ... ቀጣዩ የኮድ ክፍሎች ...
+              return (
                 <div key={group._id} className="bg-white rounded-xl shadow-sm border p-5 flex flex-col justify-between">
                   <div>
                     <div className="flex justify-between items-start mb-3">
@@ -407,7 +401,7 @@ const Dashboard = () => {
                       
                       <div className="flex justify-between">
                         <span>አባላት፡</span>
-                        <span className="font-bold text-gray-800">{actualMembersCount} አባላት</span>
+                        <span className="font-bold text-gray-800">{actualMembers.length} አባላት</span>
                       </div>
 
                       {/* Progress Bar */}
