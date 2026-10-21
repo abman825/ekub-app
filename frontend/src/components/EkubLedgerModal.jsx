@@ -199,32 +199,41 @@ const EkubLedgerModal = ({ isOpen, onClose, group, userRole }) => {
           </div>
         </div>
 
-        {/* 🏆 ያለፉ ዕጣ አሸናፊዎች (በቅደም ተከተል የተደደረደሩ) */}
-        {currentGroup?.type === 'lottery' && currentGroup?.winnersHistory && currentGroup.winnersHistory.length > 0 && (
-          <div className="mb-6 bg-green-50/60 border border-green-200 rounded-xl p-4">
-            <h4 className="text-sm font-bold text-green-900 mb-3 flex items-center gap-2">
-              🏆 ያለፉ ዕጣ አሸናፊዎች (በቅደም ተከተል)
-            </h4>
-            <div className="space-y-2">
-              {currentGroup.winnersHistory.map((winner, index) => (
-                <div 
-                  key={index} 
-                  className="flex justify-between items-center bg-white p-2.5 rounded-lg border border-green-100 text-xs shadow-sm"
-                >
-                  <div className="flex items-center gap-2">
-                    <span className="bg-green-600 text-white font-bold rounded-full w-5 h-5 flex items-center justify-center text-[10px]">
-                      {index + 1}
-                    </span>
-                    <span className="font-bold text-gray-800">{winner.name || winner.phone}</span>
-                  </div>
-                  <span className="text-gray-500 font-medium">
-                    {winner.wonAt ? new Date(winner.wonAt).toLocaleDateString() : `ዙር ${index + 1}`}
-                  </span>
-                </div>
-              ))}
+        {/* 🏆 ያለፉ ዕጣ አሸናፊዎች (በቅደም ተከተል) */}
+{currentGroup?.type === 'lottery' && currentGroup?.winnersHistory && currentGroup.winnersHistory.length > 0 && (
+  <div className="mb-6 bg-green-50/60 border border-green-200 rounded-xl p-4">
+    <h4 className="text-sm font-bold text-green-900 mb-3 flex items-center gap-2">
+      🏆 ያለፉ ዕጣ አሸናፊዎች (በቅደም ተከተል)
+    </h4>
+    <div className="space-y-2">
+      {currentGroup.winnersHistory.map((winner, index) => {
+        // 🔴 ዋናው ማስተካከያ፦ አሸናፊው በ winner.member ወይም በቀጥታ በ winner ውስጥ ሊሆን ስለሚችል በጥንቃቄ ማውጣት
+        const memberInfo = winner.member && typeof winner.member === 'object' ? winner.member : winner;
+        const nameToShow = memberInfo.name || memberInfo.phone || 'አባል';
+        const phoneToShow = memberInfo.phone ? formatPhoneNumber(memberInfo.phone) : '';
+
+        return (
+          <div 
+            key={index} 
+            className="flex justify-between items-center bg-white p-2.5 rounded-lg border border-green-100 text-xs shadow-sm"
+          >
+            <div className="flex items-center gap-2">
+              <span className="bg-green-600 text-white font-bold rounded-full w-5 h-5 flex items-center justify-center text-[10px]">
+                {index + 1}
+              </span>
+              <span className="font-bold text-gray-800">
+                {nameToShow} {phoneToShow && `(${phoneToShow})`}
+              </span>
             </div>
+            <span className="text-gray-500 font-medium">
+              {winner.wonAt ? new Date(winner.wonAt).toLocaleDateString() : `ዙር ${index + 1}`}
+            </span>
           </div>
-        )}
+        );
+      })}
+    </div>
+  </div>
+)}
 
         <div className="print-area space-y-4">
           {/* Latest Winner Banner */}
