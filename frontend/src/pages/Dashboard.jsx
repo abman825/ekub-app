@@ -224,9 +224,9 @@ const Dashboard = () => {
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
       <nav className="bg-white border-b px-6 py-4 flex justify-between items-center shadow-sm">
-        <h1 className="text-xl font-bold text-blue-600">ደጅ እቁብ</h1>
+        <h1 className="text-xl font-bold text-blue-600">እቁብ</h1>
         <div className="flex items-center gap-4">
-          <span className="text-sm font-medium text-gray-700">ሰላም, {user?.name} ({user?.role})</span>
+          <span className="text-sm font-medium text-gray-700"> {user?.name} ({user?.role})</span>
           <button 
             onClick={handleLogout} 
             className="text-sm bg-red-50 text-red-600 px-3 py-1.5 rounded-lg border border-red-200 hover:bg-red-100 font-medium transition"
