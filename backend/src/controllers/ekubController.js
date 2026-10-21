@@ -3,7 +3,7 @@ const User = require('../models/User');
 const Contribution = require('../models/Contribution');
 const { notifyLotteryWinner } = require('../utils/telegramBot');
 
-// 1. አዲስ የእቁብ ቡድን ማቋቋሚያ (Admin Only)
+// 1. አዲስ የእቁብ ቢሮ መመስረቻ (Admin Only)
 const createEkubGroup = async (req, res) => {
   try {
     const { title, type, contributionAmount, targetGoal, frequency, drawIntervalDays, drawDay } = req.body;
@@ -12,7 +12,7 @@ const createEkubGroup = async (req, res) => {
       title,
       type,
       contributionAmount,
-      targetGoal: Number(targetGoal || 0), // <--- ለሁለቱም (Target እና Lottery) የሚላከውን እሴት እንዲቀበል ተደርጓል!
+      targetGoal: Number(targetGoal || 0),
       frequency: frequency || 'daily',
       drawDay: frequency === 'weekly' ? Number(drawDay || 1) : 1,
       drawIntervalDays: type === 'lottery' ? Number(drawIntervalDays || 1) : 1,
@@ -26,7 +26,7 @@ const createEkubGroup = async (req, res) => {
   }
 };
 
-// 2. የእቁብ ቡድኖችን ማየት (በተጠቃሚው ሚና እና ፈቃድ)
+// 2. የእቁብ ቢሮዎችን ማግኘት (በተጠቃሚው ሰአት እና ፍጥነት)
 const getEkubGroups = async (req, res) => {
   try {
     let groups;
@@ -47,7 +47,7 @@ const getEkubGroups = async (req, res) => {
   }
 };
 
-// 3. የአንድ እቁብ ዝርዝር መረጃ ማግኘት
+// 3. አንድ እቁብ ዝርዝር መረጃ ማግኘት (winnersHistory እና latestWinner በ populate የተደገፈ)
 const getEkubGroupById = async (req, res) => {
   try {
     const group = await EkubGroup.findById(req.params.id)
@@ -66,7 +66,7 @@ const getEkubGroupById = async (req, res) => {
   }
 };
 
-// 4. አዲስ አባልን በስልክ ቁጥር ወደ እቁብ መመዝገብ
+// 4. አዲስ አባል በስልክ ቁጥር ወደ እቁብ መመዝገብ
 const addMemberToGroup = async (req, res) => {
   try {
     const { groupId } = req.params;
@@ -79,7 +79,7 @@ const addMemberToGroup = async (req, res) => {
 
     let member = await User.findOne({ phone });
     if (!member) {
-      return res.status(404).json({ message: 'ይህ ስልክ ቁጥር ያለው አባል ራሱ አልተመዘገበም!' });
+      return res.status(404).json({ message: 'ይህ ስልክ ቁጥር ያለው አባል ሰርቨር ላይ አልተመዘገበም!' });
     }
 
     if (group.members.includes(member._id)) {
@@ -95,28 +95,28 @@ const addMemberToGroup = async (req, res) => {
   }
 };
 
-// 5. ዕጣ አሸናፊን መምረጫ እና ዳታቤዝ ላይ ሴቭ ማድረጊያ (Admin Only) + Telegram Notification
+// 5. ዕጣ አሸናፊን መምረጥ እና ዳታቤዝ ላይ ሐሪፍ ትክክለኛነት ማረጋገጫ (Admin Only) + Telegram Notification
 const drawLotteryWinner = async (req, res) => {
   try {
     const { groupId } = req.body;
 
-    // telegramChatId አብሮ እንዲመጣ በ populate ላይ ተጨምሯል
     const group = await EkubGroup.findById(groupId).populate('members', 'name phone telegramChatId');
     if (!group) {
       return res.status(404).json({ message: 'እቁብ አልተገኘም!' });
     }
 
     if (!group.members || group.members.length === 0) {
-      return res.status(400).json({ message: 'እቁቡ ውስጥ አባላት የሉም!' });
+      return res.status(400).json({ message: 'እቁብ ውስጥ አባላት የሉም!' });
     }
 
     const adminId = group.admin?.toString();
     const activeMembers = group.members.filter(m => m._id.toString() !== adminId);
 
     if (activeMembers.length === 0) {
-      return res.status(400).json({ message: 'ከአድሚን ውጭ ሌላ አባል የለም!' });
+      return res.status(400).json({ message: 'ከአድሚኑ ውጪ ሌላ አባል የለም!' });
     }
 
+    // የቅርብ ጊዜውን አሸናፊ ወደ winnersHistory መግፋት (ካልተደጋገመ)
     if (group.latestWinner && group.latestWinner.member) {
       const alreadyInHistory = group.winnersHistory.some(
         w => w.member?.toString() === group.latestWinner.member?.toString() &&
@@ -134,6 +134,7 @@ const drawLotteryWinner = async (req, res) => {
     
     let eligibleMembers = activeMembers.filter(m => !previousWinnerIds.includes(m._id.toString()));
     
+    // ሁሉም አባላት ካሸነፉ ታሪኩን ራሱን ጀምሮ እንደገና ዑደቱን መቀጠል ከፈለጉ
     if (eligibleMembers.length === 0) {
       group.winnersHistory = [];
       eligibleMembers = activeMembers;
@@ -151,7 +152,7 @@ const drawLotteryWinner = async (req, res) => {
 
     const currentRound = (group.winnersHistory ? group.winnersHistory.length : 0) + 1;
 
-    // Telegram Bot Notification Call (telegramChatId አብሮ ይላካል)
+    // Telegram Bot Notification Call
     notifyLotteryWinner(
       group.title,
       selectedWinner.name || 'አባል',
@@ -160,6 +161,7 @@ const drawLotteryWinner = async (req, res) => {
       selectedWinner.telegramChatId
     );
 
+    // 🛠️ ሪስፖንሱን ከነ ሙሉ ፖፕሌት (winnersHistory.member) ጋር መመለስ
     const updatedGroup = await EkubGroup.findById(groupId)
       .populate('admin', 'name phone bankDetails chapaSecretKey')
       .populate('members', 'name phone telegramChatId')
@@ -172,7 +174,7 @@ const drawLotteryWinner = async (req, res) => {
   }
 };
 
-// 6. የአንድ አባል የእቁብ ደብተር/ክፍያ ታሪክ ማሁመል
+// 6. የአንድ አባል የእቁብ ደፍተር/ክፍያ ታሪክ ማሰባሰቢያ
 const getMemberLedger = async (req, res) => {
   try {
     const { ekubId } = req.params;
