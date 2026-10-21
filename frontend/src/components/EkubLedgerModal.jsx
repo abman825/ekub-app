@@ -10,6 +10,7 @@ const EkubLedgerModal = ({ isOpen, onClose, group, userRole }) => {
   const [loading, setLoading] = useState(true);
   const [currentGroup, setCurrentGroup] = useState(group);
   const [isDrawing, setIsDrawing] = useState(false);
+  const [showWinnersHistory, setShowWinnersHistory] = useState(false);
 
   // 🔍 የፍለጋ እና የማጣሪያ ስንቶች (Search & Filter States)
   const [statusFilter, setStatusFilter] = useState('all');
@@ -199,39 +200,52 @@ const EkubLedgerModal = ({ isOpen, onClose, group, userRole }) => {
           </div>
         </div>
 
-        {/* 🏆 ያለፉ ዕጣ አሸናፊዎች (በቅደም ተከተል) */}
+        {/* 🏆 ያለፉ ዕጣ አሸናፊዎች (Collapsible Accordion) */}
 {currentGroup?.type === 'lottery' && currentGroup?.winnersHistory && currentGroup.winnersHistory.length > 0 && (
-  <div className="mb-6 bg-green-50/60 border border-green-200 rounded-xl p-4">
-    <h4 className="text-sm font-bold text-green-900 mb-3 flex items-center gap-2">
-      🏆 ያለፉ ዕጣ አሸናፊዎች (በቅደም ተከተል)
-    </h4>
-    <div className="space-y-2">
-      {currentGroup.winnersHistory.map((winner, index) => {
-        // 🔴 ዋናው ማስተካከያ፦ አሸናፊው በ winner.member ወይም በቀጥታ በ winner ውስጥ ሊሆን ስለሚችል በጥንቃቄ ማውጣት
-        const memberInfo = winner.member && typeof winner.member === 'object' ? winner.member : winner;
-        const nameToShow = memberInfo.name || memberInfo.phone || 'አባል';
-        const phoneToShow = memberInfo.phone ? formatPhoneNumber(memberInfo.phone) : '';
+  <div className="mb-4 bg-green-50/60 border border-green-200 rounded-xl overflow-hidden shadow-sm">
+    <button
+      onClick={() => setShowWinnersHistory(!showWinnersHistory)}
+      className="w-full p-3.5 flex justify-between items-center text-left hover:bg-green-100/50 transition font-bold text-green-900 text-sm"
+    >
+      <span className="flex items-center gap-2">
+        🏆 ያለፉ ዕጣ አሸናፊዎች (በቅደም ተከተል) 
+        <span className="bg-green-600 text-white text-xs px-2 py-0.5 rounded-full font-normal">
+          {currentGroup.winnersHistory.length}
+        </span>
+      </span>
+      <span className="text-gray-500 text-xs">
+        {showWinnersHistory ? '▲ Cufi' : '▼ Tarree Banuu'}
+      </span>
+    </button>
 
-        return (
-          <div 
-            key={index} 
-            className="flex justify-between items-center bg-white p-2.5 rounded-lg border border-green-100 text-xs shadow-sm"
-          >
-            <div className="flex items-center gap-2">
-              <span className="bg-green-600 text-white font-bold rounded-full w-5 h-5 flex items-center justify-center text-[10px]">
-                {index + 1}
-              </span>
-              <span className="font-bold text-gray-800">
-                {nameToShow} {phoneToShow && `(${phoneToShow})`}
+    {showWinnersHistory && (
+      <div className="p-4 border-t border-green-200 space-y-2 bg-white max-h-48 overflow-y-auto">
+        {currentGroup.winnersHistory.map((winner, index) => {
+          const memberInfo = winner.member && typeof winner.member === 'object' ? winner.member : winner;
+          const nameToShow = memberInfo.name || memberInfo.phone || 'አባል';
+          const phoneToShow = memberInfo.phone ? formatPhoneNumber(memberInfo.phone) : '';
+
+          return (
+            <div 
+              key={index} 
+              className="flex justify-between items-center bg-green-50/30 p-2.5 rounded-lg border border-green-100 text-xs"
+            >
+              <div className="flex items-center gap-2">
+                <span className="bg-green-600 text-white font-bold rounded-full w-5 h-5 flex items-center justify-center text-[10px]">
+                  {index + 1}
+                </span>
+                <span className="font-bold text-gray-800">
+                  {nameToShow} {phoneToShow && `(${phoneToShow})`}
+                </span>
+              </div>
+              <span className="text-gray-500 font-medium">
+                {winner.wonAt ? new Date(winner.wonAt).toLocaleDateString() : `ዙር ${index + 1}`}
               </span>
             </div>
-            <span className="text-gray-500 font-medium">
-              {winner.wonAt ? new Date(winner.wonAt).toLocaleDateString() : `ዙር ${index + 1}`}
-            </span>
-          </div>
-        );
-      })}
-    </div>
+          );
+        })}
+      </div>
+    )}
   </div>
 )}
 
