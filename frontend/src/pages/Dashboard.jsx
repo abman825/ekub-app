@@ -299,22 +299,22 @@ const Dashboard = () => {
                     </div>
                   </div>
 
-                  <div className="flex gap-2">
-                    <button 
-                      onClick={() => handleApprove(p._id, 'approved')} 
-                      className="flex items-center gap-1 bg-green-600 text-white px-3 py-1.5 rounded-lg text-sm hover:bg-green-700 font-medium transition"
-                    >
-                      <CheckCircle size={16} /> አጽድቅ
-                    </button>
-                    <button 
-                      onClick={() => handleApprove(p._id, 'rejected')} 
-                      className="flex items-center gap-1 bg-red-600 text-white px-3 py-1.5 rounded-lg text-sm hover:bg-red-700 font-medium transition"
-                    >
-                      <XCircle size={16} /> ውድቅ አድርግ
-                    </button>
-                  </div>
+                  <div className="flex flex-col gap-2 w-full sm:w-36">
+    <button 
+      onClick={() => handleApprove(p._id, 'approved')} 
+      className="w-full flex items-center justify-center gap-1 bg-green-600 text-white px-3 py-1.5 rounded-lg text-sm hover:bg-green-700 font-medium transition shadow-sm"
+    >
+      <CheckCircle size={16} /> አጽድቅ
+    </button>
+    <button 
+      onClick={() => handleApprove(p._id, 'rejected')} 
+      className="w-full flex items-center justify-center gap-1 bg-red-600 text-white px-3 py-1.5 rounded-lg text-sm hover:bg-red-700 font-medium transition shadow-sm"
+    >
+      <XCircle size={16} /> ውድቅ አድርግ
+    </button>
+  </div>
 
-                </div>
+</div>
               ))}
             </div>
           </div>
