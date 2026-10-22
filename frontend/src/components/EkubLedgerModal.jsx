@@ -12,9 +12,10 @@ const EkubLedgerModal = ({ isOpen, onClose, group, userRole }) => {
   const [isDrawing, setIsDrawing] = useState(false);
   const [showWinnersHistory, setShowWinnersHistory] = useState(false);
 
-  // 🔍 የፍለጋ እና የማጣሪያ ስንዎች (Search & Filter States)
+  // Search & Filter States
   const [statusFilter, setStatusFilter] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
+  const [todayFilter, setTodayFilter] = useState('all'); // 'all', 'paidToday', 'unpaidToday'
 
   useEffect(() => {
     if (isOpen && group) {
@@ -60,10 +61,37 @@ const EkubLedgerModal = ({ isOpen, onClose, group, userRole }) => {
     return m._id ? m._id.toString() !== adminId?.toString() : false;
   });
 
-  // አዲስ ሰራሁ አባላትን በስም ማጣሪያ (Filtered Member Buttons for Admin)
+  // Helper: Check if member paid for the current round / today
+  const getMemberRoundStatus = (memberId) => {
+    const memberApprovedPayments = ledger.filter(
+      p => (p.member?._id || p.member)?.toString() === memberId.toString() && p.status === 'approved'
+    );
+    const paidRoundsCount = memberApprovedPayments.length;
+
+    // Determine max rounds paid across members to gauge current expected round
+    const allMemberCounts = membersList.map(m => {
+      return ledger.filter(p => (p.member?._id || p.member)?.toString() === m._id.toString() && p.status === 'approved').length;
+    });
+    const currentMaxRound = Math.max(0, ...allMemberCounts);
+
+    // If member has paid up to the current maximum round, they are up to date (Green), else Red
+    const isPaidUpToDate = paidRoundsCount >= (currentMaxRound === 0 ? 1 : currentMaxRound);
+
+    return {
+      paidRoundsCount,
+      isPaidUpToDate
+    };
+  };
+
+  // Filtered Members List for Admin with Status Colors & Search
   const filteredMembersList = membersList.filter(m => {
     const nameMatches = m.name?.toLowerCase().includes(searchTerm.toLowerCase());
     const phoneMatches = m.phone?.includes(searchTerm);
+    const { isPaidUpToDate } = getMemberRoundStatus(m._id);
+
+    if (todayFilter === 'paidToday') return (nameMatches || phoneMatches) && isPaidUpToDate;
+    if (todayFilter === 'unpaidToday') return (nameMatches || phoneMatches) && !isPaidUpToDate;
+
     return nameMatches || phoneMatches;
   });
 
@@ -100,7 +128,7 @@ const EkubLedgerModal = ({ isOpen, onClose, group, userRole }) => {
           });
         }
       } catch (err) {
-        console.error('አሁሳን ማመዝገብ አልተቻለም', err);
+        console.error('ዕጣ ማውጣት አልተቻለም', err);
         alert(err.response?.data?.message || 'ዕጣ ማውጣት አልተቻለም');
       } finally {
         setIsDrawing(false);
@@ -131,7 +159,7 @@ const EkubLedgerModal = ({ isOpen, onClose, group, userRole }) => {
   };
 
   const rawMemberPayments = userRole === 'admin'
-    ? (selectedMember ? ledger.filter(item => item.member?._id === selectedMember._id) : [])
+    ? (selectedMember ? ledger.filter(item => (item.member?._id || item.member) === selectedMember._id) : [])
     : ledger;
 
   const sortedPayments = [...rawMemberPayments].sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
@@ -148,7 +176,7 @@ const EkubLedgerModal = ({ isOpen, onClose, group, userRole }) => {
 
   const displayPayments = processedPayments.reverse();
 
-  // 🔍 ክፍያዎችን በ Status የማጣሪያ ሎጂክ
+  // Status Filter Logic
   const filteredPayments = displayPayments.filter((item) => {
     return statusFilter === 'all' || item.status === statusFilter;
   });
@@ -186,7 +214,7 @@ const EkubLedgerModal = ({ isOpen, onClose, group, userRole }) => {
               <button
                 onClick={handleExportExcel}
                 className="flex items-center gap-1 bg-green-600 text-white px-3 py-1.5 rounded-lg text-xs font-semibold hover:bg-green-700 transition"
-                title="በኤክሴል ቅርጸ እ导出"
+                title="በኤክሴል ቅርጸ 导出"
               >
                 <FileSpreadsheet size={16} /> ኤክሴል
               </button>
@@ -194,7 +222,7 @@ const EkubLedgerModal = ({ isOpen, onClose, group, userRole }) => {
             <button
               onClick={handlePrintReceipt}
               className="flex items-center gap-1 bg-blue-600 text-white px-3 py-1.5 rounded-lg text-xs font-semibold hover:bg-blue-700 transition"
-              title="ደረሰኝ አพิมพ์ / PDF አ导出"
+              title="ደረሰኝ ማተም / PDF 导出"
             >
               <Printer size={16} /> ደረሰኝ / PDF
             </button>
@@ -202,7 +230,7 @@ const EkubLedgerModal = ({ isOpen, onClose, group, userRole }) => {
           </div>
         </div>
 
-        {/* 🏆 ባለፈ ዕጣ አሸናፊዎች (Collapsible Accordion) */}
+        {/* Winners History Accordion */}
         {currentGroup?.type === 'lottery' && currentGroup?.winnersHistory && currentGroup.winnersHistory.length > 0 && (
           <div className="mb-4 bg-green-50/60 border border-green-200 rounded-xl overflow-hidden shadow-sm">
             <button
@@ -252,7 +280,7 @@ const EkubLedgerModal = ({ isOpen, onClose, group, userRole }) => {
         )}
 
         <div className="print-area space-y-4">
-          {/* Latest Winner Banner - 🟢 አሸናፊ ካለ ብቻ እንዲታይ የተደረገ */}
+          {/* Latest Winner Banner */}
           {currentGroup.type === 'lottery' && winnerObj && (
             <div className="mb-4 bg-gradient-to-r from-green-50 to-emerald-100 border-2 border-green-400 p-3 rounded-xl text-center shadow-sm">
               <h3 className="text-sm font-bold text-green-800 flex items-center justify-center gap-2">
@@ -288,29 +316,36 @@ const EkubLedgerModal = ({ isOpen, onClose, group, userRole }) => {
             <p className="text-center py-8 text-gray-500">መረጃ በመጫን ላይ ነው...</p>
           ) : (
             <div>
-              {/* 🔑 ለአድሚን ብቻ የሚታይ የአባል ፍለጋ እና መምረጫ ክፍል */}
+              {/* Admin Filter & Payment Status Indicator Section */}
               {userRole === 'admin' && (
                 <div className="mb-5 bg-gray-50 p-3 rounded-xl border no-print space-y-3">
-                  <div className="flex justify-between items-center">
-                    <h4 className="text-xs font-bold text-gray-700">የአባል ደፍተር ለማየት አባል ይምረጡ</h4>
+                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+                    <h4 className="text-xs font-bold text-gray-700">የአባላት የክፍያ ሁኔታ (የከፈሉ/ያልከፈሉ)</h4>
                     
-                    {/* Status Filter Dropdown */}
+                    {/* Paid vs Unpaid Filter Buttons */}
                     <div className="flex items-center gap-1.5">
-                      <Filter size={13} className="text-gray-500" />
-                      <select
-                        value={statusFilter}
-                        onChange={(e) => setStatusFilter(e.target.value)}
-                        className="text-[11px] border border-gray-300 rounded-lg px-2 py-1 bg-white focus:outline-none focus:ring-1 focus:ring-blue-500 font-medium"
+                      <button
+                        onClick={() => setTodayFilter('all')}
+                        className={`px-2.5 py-1 rounded-lg text-[11px] font-bold border transition ${todayFilter === 'all' ? 'bg-gray-800 text-white' : 'bg-white text-gray-700'}`}
                       >
-                        <option value="all">ሁሉንም ክፍያዎች</option>
-                        <option value="approved">ጸድቆ (Approved)</option>
-                        <option value="pending">በመጠባበቅ ላይ (Pending)</option>
-                        <option value="rejected">ውድቅ የተደረገ (Rejected)</option>
-                      </select>
+                        ሁሉንም ({membersList.length})
+                      </button>
+                      <button
+                        onClick={() => setTodayFilter('paidToday')}
+                        className={`px-2.5 py-1 rounded-lg text-[11px] font-bold border transition ${todayFilter === 'paidToday' ? 'bg-green-600 text-white' : 'bg-green-50 text-green-700 border-green-200'}`}
+                      >
+                        የከፈሉ (Green)
+                      </button>
+                      <button
+                        onClick={() => setTodayFilter('unpaidToday')}
+                        className={`px-2.5 py-1 rounded-lg text-[11px] font-bold border transition ${todayFilter === 'unpaidToday' ? 'bg-red-600 text-white' : 'bg-red-50 text-red-700 border-red-200'}`}
+                      >
+                        ያልከፈሉ (Red)
+                      </button>
                     </div>
                   </div>
 
-                  {/* ለአድሚን የአባል ማሻሻያ ሳጥን (Search Input) */}
+                  {/* Search Input */}
                   <div className="relative">
                     <Search size={14} className="absolute left-2.5 top-2.5 text-gray-400" />
                     <input
@@ -322,25 +357,32 @@ const EkubLedgerModal = ({ isOpen, onClose, group, userRole }) => {
                     />
                   </div>
 
-                  {/* በፍለጋው መሠረት የሚወጣ የአባል ቁልፍ ሰሌዳዎች */}
-                  <div className="flex flex-wrap gap-2 max-h-32 overflow-y-auto">
+                  {/* Member Buttons with Red/Green Indicators */}
+                  <div className="flex flex-wrap gap-2 max-h-36 overflow-y-auto pt-1">
                     {filteredMembersList.length === 0 ? (
-                      <p className="text-xs text-gray-400 italic">ምንም የተገኘ ዓይነት አባል አልተገኘም።</p>
+                      <p className="text-xs text-gray-400 italic">ምንም የተገኘ አባል የለም።</p>
                     ) : (
-                      filteredMembersList.map((m) => (
-                        <button
-                          key={m._id}
-                          onClick={() => setSelectedMember(selectedMember?._id === m._id ? null : m)}
-                          className={`flex items-center gap-1 px-2.5 py-1 rounded-lg border text-xs font-medium transition ${
-                            selectedMember?._id === m._id 
-                              ? 'bg-blue-600 text-white border-blue-600 shadow-sm' 
-                              : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-100'
-                          }`}
-                        >
-                          <User size={12} />
-                          {m.name}
-                        </button>
-                      ))
+                      filteredMembersList.map((m) => {
+                        const { isPaidUpToDate, paidRoundsCount } = getMemberRoundStatus(m._id);
+                        const isSelected = selectedMember?._id === m._id;
+
+                        return (
+                          <button
+                            key={m._id}
+                            onClick={() => setSelectedMember(isSelected ? null : m)}
+                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-bold transition shadow-sm ${
+                              isSelected ? 'ring-2 ring-blue-600 shadow-md' : ''
+                            } ${
+                              isPaidUpToDate
+                                ? 'bg-green-100 text-green-800 border-green-300 hover:bg-green-200' // 🟢 Green
+                                : 'bg-red-100 text-red-800 border-red-300 hover:bg-red-200' // 🔴 Red
+                            }`}
+                          >
+                            <span className={`w-2 h-2 rounded-full ${isPaidUpToDate ? 'bg-green-600' : 'bg-red-600'}`}></span>
+                            {m.name} ({paidRoundsCount} ዙር)
+                          </button>
+                        );
+                      })
                     )}
                   </div>
                 </div>
@@ -379,18 +421,16 @@ const EkubLedgerModal = ({ isOpen, onClose, group, userRole }) => {
                     <thead>
                       <tr className="bg-gray-100 border-b text-gray-700 text-xs">
                         <th className="p-2.5">ዙር</th>
-                        {userRole === 'admin' && <th className="p-2.5">የተከፋይ አባል</th>}
                         <th className="p-2.5">የተከፈለበት ቀን</th>
                         <th className="p-2.5">መጠን</th>
                         <th className="p-2.5">የክፍያ መንገድ</th>
                         <th className="p-2.5">ሁኔታ</th>
-                        <th className="p-2.5 no-print">ደረሰኝ / Ref</th>
                       </tr>
                     </thead>
                     <tbody>
                       {filteredPayments.length === 0 ? (
                         <tr>
-                          <td colSpan={userRole === 'admin' ? 7 : 6} className="text-center py-6 text-gray-500 text-xs">
+                          <td colSpan={5} className="text-center py-6 text-gray-500 text-xs">
                             ምንም የተመዘገበ የክፍያ መረጃ የለም።
                           </td>
                         </tr>
@@ -400,12 +440,6 @@ const EkubLedgerModal = ({ isOpen, onClose, group, userRole }) => {
                             <td className="p-2.5 font-bold text-blue-600">
                               {item.roundNumber ? `ዙር ${item.roundNumber}` : '-'}
                             </td>
-                            {userRole === 'admin' && (
-                              <td className="p-2.5 font-medium text-gray-800">
-                                {item.member?.name} <br />
-                                <span className="text-[10px] text-gray-500">{formatPhoneNumber(item.member?.phone)}</span>
-                              </td>
-                            )}
                             <td className="p-2.5 text-gray-600">
                               {new Date(item.createdAt).toLocaleDateString('et-ET')}
                             </td>
@@ -423,25 +457,6 @@ const EkubLedgerModal = ({ isOpen, onClose, group, userRole }) => {
                                 <span className="flex items-center gap-1 text-yellow-600 font-medium text-[11px] bg-yellow-50 px-2 py-0.5 rounded-full w-fit">
                                   <Clock size={12} /> በመጠባበቅ ላይ
                                 </span>
-                              )}
-                              {item.status === 'rejected' && (
-                                <span className="flex items-center gap-1 text-red-600 font-medium text-[11px] bg-red-50 px-2 py-0.5 rounded-full w-fit">
-                                  <XCircle size={12} /> ውድቅ የተደረገ
-                                </span>
-                              )}
-                            </td>
-                            <td className="p-2.5 no-print">
-                              {item.receiptUrl ? (
-                                <a
-                                  href={item.receiptUrl}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="flex items-center gap-1 text-blue-600 hover:underline text-[11px] font-medium"
-                                >
-                                  <FileText size={12} /> ስክሪንሾት
-                                </a>
-                              ) : (
-                                <span className="text-[10px] text-gray-400">Ref: {item.transactionRef || 'N/A'}</span>
                               )}
                             </td>
                           </tr>
