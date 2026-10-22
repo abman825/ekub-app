@@ -4,7 +4,7 @@ import API from '../services/api';
 import { AuthContext } from '../context/AuthContext';
 import { 
   PlusCircle, Wallet, CheckCircle, XCircle, FileText, UserPlus, 
-  Loader2, LayoutDashboard, Users, CreditCard, LogOut, Menu, X, Globe 
+  Loader2, LayoutDashboard, CreditCard, LogOut, Menu, X, Globe 
 } from 'lucide-react';
 import EkubLedgerModal from '../components/EkubLedgerModal';
 import SkeletonCard from '../components/SkeletonCard';
@@ -166,7 +166,7 @@ const Dashboard = () => {
   const [drawIntervalDays, setDrawIntervalDays] = useState(3);
   const [drawDay, setDrawDay] = useState(1);
 
-  // Payment Form State (Chapa + Receipt preserved)
+  // Payment Form State
   const [paymentMethod, setPaymentMethod] = useState('receipt');
   const [receiptFile, setReceiptFile] = useState(null);
   const [txRef, setTxRef] = useState('');
@@ -594,8 +594,12 @@ const Dashboard = () => {
 
                         <div className="flex flex-col gap-2 pt-2 border-t border-gray-50">
                           <div className="flex gap-2">
+                            {/* 🎯 "የእቁብ ደፍተር" BUTTON CLICK HANDLER ACCORDING TO PROPS */}
                             <button
-                              onClick={() => { setSelectedGroup(group); setShowLedgerModal(true); }}
+                              onClick={() => { 
+                                setSelectedGroup(group); 
+                                setShowLedgerModal(true); 
+                              }}
                               className={`${isAdmin ? 'w-full' : 'w-1/2'} border border-blue-600 text-blue-600 py-2 rounded-xl hover:bg-blue-50 font-bold text-xs flex items-center justify-center gap-1.5 transition`}
                             >
                               <FileText size={14} /> {t.ledger}
@@ -852,12 +856,15 @@ const Dashboard = () => {
       )}
 
       {/* LEDGER MODAL */}
-      {showLedgerModal && selectedGroup && (
-        <EkubLedgerModal 
-          group={selectedGroup} 
-          onClose={() => { setShowLedgerModal(false); setSelectedGroup(null); }} 
-        />
-      )}
+{showLedgerModal && selectedGroup && (
+  <EkubLedgerModal 
+    isOpen={showLedgerModal}
+    group={selectedGroup} 
+    userRole={user?.role} 
+    currentLang={lang}
+    onClose={() => { setShowLedgerModal(false); setSelectedGroup(null); }} 
+  />
+)}
 
       {/* IMAGE PREVIEW MODAL */}
       {previewImage && (
