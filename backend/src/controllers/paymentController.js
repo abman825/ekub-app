@@ -4,7 +4,24 @@ const User = require('../models/User');
 const axios = require('axios');
 const { notifyPaymentApproved } = require('../utils/telegramBot');
 
-// 1. የባንክ ደረሰኝ (Manual Screenshot Upload) መላኪያ
+// Helper funkce pro kontrolu limitu plateb uživatele
+const checkUserLimit = async (userId, ekubGroupId) => {
+  const group = await EkubGroup.findById(ekubGroupId);
+  if (!group) return false;
+
+  const userContributions = await Contribution.find({
+    ekubGroup: ekubGroupId,
+    member: userId,
+    status: { $in: ['approved', 'pending'] }
+  });
+
+  const totalPaid = userContributions.reduce((sum, c) => sum + c.amount, 0);
+  const userTargetGoal = group.targetGoal || 10000;
+
+  return totalPaid >= userTargetGoal;
+};
+
+// 1. Odeslání potvrzení o platbě (Manual Screenshot Upload)
 const submitReceiptPayment = async (req, res) => {
   try {
     const { ekubGroupId, amount, transactionRef } = req.body;
@@ -12,6 +29,13 @@ const submitReceiptPayment = async (req, res) => {
 
     if (!receiptUrl && !transactionRef) {
       return res.status(400).json({ message: 'እባክዎን የባንክ ደረሰኝ ወይም የትራንዛክሽን ቁጥር ያስገቡ!' });
+    }
+
+    const isFinished = await checkUserLimit(req.user._id, ekubGroupId);
+    if (isFinished) {
+      return res.status(400).json({ 
+        message: 'እርስዎ የዚህን እቁብ ክፍያ ሙሉ በሙሉ አጠናቀዋል። ተጨማሪ ክፍያ መክፈል አይችሉም!' 
+      });
     }
 
     const contribution = await Contribution.create({
@@ -24,14 +48,38 @@ const submitReceiptPayment = async (req, res) => {
       status: 'pending'
     });
 
-    res.status(201).json({ message: 'የክፍያ ደረሰኙ በስኬት ተልኳል!', contribution });
+    return res.status(201).json({ message: 'የክፍያ ደረሰኙ በስኬት ተልኳል!', contribution }); 
   } catch (error) {
     console.error("UPLOAD ERROR:", error);
     res.status(500).json({ message: error.message });
   }
 };
 
-// 2. Chapa Online ክፍያ ማስጀመሪያ
+// 2. Získání čekajících plateb pro admina (správné Načtení/Populate jména člena)
+const getPendingPayments = async (req, res) => {
+  try {
+    const contributions = await Contribution.find({ status: 'pending', paymentMethod: 'receipt' })
+      .populate('member', 'name phone telegramChatId')
+      .populate({
+        path: 'ekubGroup',
+        select: 'title admin',
+        populate: { path: 'admin', select: '_id name' }
+      });
+
+    const adminContributions = contributions.filter((c) => {
+      if (!c.ekubGroup) return false;
+      const adminId = c.ekubGroup.admin?._id || c.ekubGroup.admin;
+      return adminId?.toString() === req.user._id.toString();
+    });
+
+    res.json(adminContributions);
+  } catch (error) {
+    console.error("PENDING PAYMENTS ERROR:", error);
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// 3. Inicializace platby přes Chapa Online (የተስተካከለና የጸዳ)
 const initializeChapaPayment = async (req, res) => {
   try {
     const { ekubGroupId, amount } = req.body;
@@ -39,6 +87,13 @@ const initializeChapaPayment = async (req, res) => {
 
     if (!group) {
       return res.status(404).json({ message: 'የተፈለገው እቁብ አልተገኘም!' });
+    }
+
+    const isFinished = await checkUserLimit(req.user._id, ekubGroupId);
+    if (isFinished) {
+      return res.status(400).json({ 
+        message: 'እርስዎ የዚህን እቁብ ክፍያ ሙሉ በሙሉ አጠናቀዋል። ተጨማሪ ክፍያ መክፈል አይችሉም!' 
+      });
     }
 
     const chapaKey = group.admin?.chapaSecretKey || process.env.CHAPA_SECRET_KEY;
@@ -51,7 +106,16 @@ const initializeChapaPayment = async (req, res) => {
       ? req.user.email 
       : `user_${req.user.phone}@gmail.com`;
 
-    // 🌐 dynamic URLs ከ environment variables ወይም fallback
+    // 🔴 በጣም አስፈላጊ: ቻፓ ሊንክ ከመፈጠሩ በፊት ትራንዛክሽኑን በ pending መመዝገብ
+    await Contribution.create({
+      ekubGroup: ekubGroupId,
+      member: req.user._id,
+      amount: Number(amount),
+      paymentMethod: 'chapa',
+      transactionRef: tx_ref,
+      status: 'pending'
+    });
+
     const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
     const backendUrl = process.env.BACKEND_URL || 'https://ekub-app.onrender.com';
 
@@ -64,7 +128,6 @@ const initializeChapaPayment = async (req, res) => {
         first_name: req.user.name || 'Member',
         last_name: 'Ekub',
         tx_ref: tx_ref,
-        // 👈 በኮድ ውስጥ localhost የነበረው በ dynamic backendUrl ተተክቷል
         callback_url: `${backendUrl}/api/payment/chapa-webhook`,
         return_url: `${frontendUrl}/dashboard?tx_ref=${tx_ref}`
       },
@@ -86,9 +149,7 @@ const initializeChapaPayment = async (req, res) => {
   }
 };
 
-
-
-// 3. Chapa Verifikatioun (Latest or by tx_ref)
+// 4. Ověření Chapa platby
 const verifyChapaPayment = async (req, res) => {
   try {
     const { tx_ref } = req.params;
@@ -108,7 +169,6 @@ const verifyChapaPayment = async (req, res) => {
       return res.status(404).json({ message: 'ትራንዛክሽኑ አልተገኘም!' });
     }
 
-    // 🔑 Chapa ከተረጋገጠ በስተመጨረሻ የ EkubGroup totalCollected መጠን እንጨምራለን
     if (contribution.status !== 'approved') {
       contribution.status = 'approved';
       await contribution.save();
@@ -118,14 +178,14 @@ const verifyChapaPayment = async (req, res) => {
       });
     }
 
-    return res.json({ message: 'ክፍያው በአውቶማቲክ ተረጋግጦ ጽድቋል!', contribution });
+    return res.json({ message: 'ክፍያው በአውቶማቲክ ተረጋግጦ ጸድቋል!', contribution });
   } catch (error) {
     console.error('Verify Error:', error);
     res.status(500).json({ message: 'ክፍያውን ማረጋገጥ አልተቻለም' });
   }
 };
 
-// 4. አድሚን የባንክ ደረሰኝ ክፍያን ማጽደቂያ ወይም ውድቅ ማድረጊያ + Telegram Notification
+// 5. Schválení / zamítnutí platby adminem + Telegram notifikace
 const approveReceiptPayment = async (req, res) => {
   try {
     const { contributionId, status } = req.body;
@@ -135,19 +195,17 @@ const approveReceiptPayment = async (req, res) => {
     }
 
     if (contribution.status === 'approved') {
-      return res.status(400).json({ message: 'ይህ ክፍያ ቀድሞ ጽድቋል!' });
+      return res.status(400).json({ message: 'ይህ ክፍያ ቀድሞ ጸድቋል!' });
     }
 
     contribution.status = status;
     await contribution.save();
 
     if (status === 'approved') {
-      // 🔑 ክፍያው ከተጸደቀ የቡድኑን totalCollected መጠን $inc በመጠቀም እንጨምራለን
       await EkubGroup.findByIdAndUpdate(contribution.ekubGroup, {
         $inc: { totalCollected: contribution.amount }
       });
 
-      // በቴሌግራም መልዕክት መላኪያ
       await contribution.populate('member', 'name phone telegramChatId');
       await contribution.populate('ekubGroup', 'title');
 
@@ -165,24 +223,7 @@ const approveReceiptPayment = async (req, res) => {
   }
 };
 
-// 5. አድሚን የሚጠብቁ የባንክ ደረሰኝ ክፍያዎችን የሚያይበት
-const getPendingPayments = async (req, res) => {
-  try {
-    const contributions = await Contribution.find({ status: 'pending', paymentMethod: 'receipt' })
-      .populate('member', 'name phone telegramChatId')
-      .populate('ekubGroup', 'title admin');
-
-    const adminContributions = contributions.filter(
-      (c) => c.ekubGroup && c.ekubGroup.admin?._id.toString() === req.user._id.toString()
-    );
-
-    res.json(adminContributions);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-};
-
-// 6. የአባል የራሱ የእቁብ ደብተር
+// 6. Získání historie plateb pro konkrétního člena
 const getMemberLedger = async (req, res) => {
   try {
     const { ekubGroupId } = req.params;
@@ -197,7 +238,7 @@ const getMemberLedger = async (req, res) => {
   }
 };
 
-// 7. አድሚን የቡድኑን ክፍያዎች በሙሉ የሚያይበት
+// 7. Získání přehledu plateb skupiny pro admina
 const getGroupLedgerForAdmin = async (req, res) => {
   try {
     const { ekubGroupId } = req.params;

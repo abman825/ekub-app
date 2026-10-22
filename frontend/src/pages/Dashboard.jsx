@@ -74,7 +74,7 @@ const Dashboard = () => {
       let endpoint = txRefVal ? `/payment/chapa-verify/${txRefVal}` : `/payment/chapa-verify/latest`;
       const { data } = await API.get(endpoint);
       
-      alert('🎉 የ Chapa ክፍያዎ በስኬት ተረጋግጧ!');
+      alert('🎉 የ Chapa ክፍያዎ በስኬት ተረጋግጦ ጸድቋል!');
       
       window.history.replaceState({}, document.title, window.location.pathname);
       
@@ -102,7 +102,7 @@ const Dashboard = () => {
       const { data } = await API.get('/ekub');
       setGroups(data);
     } catch (err) {
-      console.error('እቁቦችን ማጥመድ አልተቻለም', err);
+      console.error('እቁቦችን ማግኘት አልተቻለም', err);
     } finally {
       setLoading(false);
     }
@@ -172,14 +172,14 @@ const Dashboard = () => {
       alert(err.response?.data?.message || 'አባል መመዝገብ አልተቻለም');
     }
   };
-const handlePayment = async (e) => {
+
+  const handlePayment = async (e) => {
     e.preventDefault();
 
-    // 🔴 እድገቱ (Progress) 100% ከሆነ ክፍያውን ማገድ
+    const goalAmount = selectedGroup?.targetGoal || 10000;
     const adminId = selectedGroup?.admin?._id || selectedGroup?.admin;
     const actualMembersCount = selectedGroup?.members?.filter(m => (m._id || m).toString() !== adminId?.toString()).length || 1;
-    const targetGoal = selectedGroup?.targetGoal || 10000;
-    const totalExpectedGoal = selectedGroup?.type === 'lottery' ? targetGoal : (targetGoal * actualMembersCount);
+    const totalExpectedGoal = selectedGroup?.type === 'lottery' ? goalAmount : (goalAmount * actualMembersCount);
     const estimatedCollected = selectedGroup?.totalCollected || 0;
 
     if (estimatedCollected >= totalExpectedGoal) {
@@ -187,8 +187,6 @@ const handlePayment = async (e) => {
       return alert('ይህ እቁብ ሙሉ በሙሉ ተጠናቋል! ከዚህ በላይ ክፍያ መክፈል አይቻልም።');
     }
 
-   
-    e.preventDefault();
     setIsSubmittingPayment(true);
 
     if (paymentMethod === 'chapa') {
@@ -244,7 +242,6 @@ const handlePayment = async (e) => {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
       <nav className="bg-white border-b px-6 py-4 flex justify-between items-center shadow-sm">
         <h1 className="text-xl font-bold text-blue-600">እቁብ</h1>
         <div className="flex items-center gap-4">
@@ -258,76 +255,63 @@ const handlePayment = async (e) => {
         </div>
       </nav>
 
-      {/* Main Content */}
       <div className="max-w-6xl mx-auto p-6">
-
-        {/* Admin Pending Receipts Approvals Section */}
         {user?.role === 'admin' && pendingPayments.length > 0 && (
           <div className="bg-white p-6 rounded-xl shadow-sm border border-yellow-300 mb-8 bg-yellow-50/20">
             <h2 className="text-lg font-bold text-gray-800 mb-4">የሚጠበቁ የክፍያ ደረሰኞች ({pendingPayments.length})</h2>
             <div className="space-y-4">
               {pendingPayments.map((p) => (
                 <div key={p._id} className="flex flex-col sm:flex-row justify-between items-start sm:items-center p-4 border rounded-lg bg-white shadow-sm gap-4">
-  
-  <div className="flex items-center gap-4 w-full sm:w-auto">
-    {p.receiptUrl ? (
-      <div 
-        onClick={() => setPreviewImage(p.receiptUrl)}
-        className="cursor-pointer group relative flex-shrink-0"
-        title="በግልጽ ለማየት ክሊክ"
-      >
-        <img 
-          src={p.receiptUrl} 
-          alt="የባንክ ደረሰኝ" 
-          className="w-20 h-20 object-cover rounded-lg border group-hover:opacity-90 shadow-sm transition"
-        />
-        <span className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 rounded-lg flex items-center justify-center text-white text-xs font-bold transition">
-          🔍 ማግኘት
-        </span>
-      </div>
-    ) : (
-      <div className="w-20 h-20 bg-gray-100 rounded-lg border flex items-center justify-center text-xs text-gray-400 text-center p-1 flex-shrink-0">
-        ምስል የለውም
-      </div>
-    )}
+                  <div className="flex items-center gap-4 w-full sm:w-auto">
+                    {p.receiptUrl ? (
+                      <div 
+                        onClick={() => setPreviewImage(p.receiptUrl)}
+                        className="cursor-pointer group relative flex-shrink-0"
+                        title="በግልጽ ለማየት ክሊክ"
+                      >
+                        <img 
+                          src={p.receiptUrl} 
+                          alt="የባንክ ደረሰኝ" 
+                          className="w-20 h-20 object-cover rounded-lg border group-hover:opacity-90 shadow-sm transition"
+                        />
+                        <span className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 rounded-lg flex items-center justify-center text-white text-xs font-bold transition">
+                          🔍 ማግኘት
+                        </span>
+                      </div>
+                    ) : (
+                      <div className="w-20 h-20 bg-gray-100 rounded-lg border flex items-center justify-center text-xs text-gray-400 text-center p-1 flex-shrink-0">
+                        {p.paymentMethod === 'chapa' ? 'Chapa Online' : 'ምስል የለውም'}
+                      </div>
+                    )}
 
-    <div>
-      <p className="font-bold text-gray-800">{p.member?.name} ({p.member?.phone})</p>
-      <p className="text-sm text-gray-600">
-        እቁብ፡ <span className="font-semibold">{p.ekubGroup?.title}</span> | መጠን፡ <span className="font-semibold text-green-600">{p.amount} ብር</span>
-      </p>
-      
-      {p.receiptUrl && (
-        <button 
-          onClick={() => setPreviewImage(p.receiptUrl)}
-          className="text-xs text-blue-600 font-semibold underline mt-1 hover:text-blue-800 block text-left"
-        >
-          🔍 ምስሉን አስፋ እዚህ ክሊክ
-        </button>
-      )}
-      
-      {p.transactionRef && (
-        <p className="text-xs text-gray-600 font-semibold mt-1">Ref No: {p.transactionRef}</p>
-      )}
-    </div>
-  </div>
+                    <div>
+                      <p className="font-bold text-gray-800">{p.member?.name} ({p.member?.phone})</p>
+                      <p className="text-sm text-gray-600">
+                        እቁብ፡ <span className="font-semibold">{p.ekubGroup?.title}</span> | መጠን፡ <span className="font-semibold text-green-600">{p.amount} ብር</span>
+                      </p>
+                      {p.transactionRef && (
+                        <p className="text-xs text-gray-600 font-semibold mt-1">Ref No: {p.transactionRef}</p>
+                      )}
+                    </div>
+                  </div>
 
-  <div className="flex sm:flex-row gap-2 w-full sm:w-auto">
-    <button 
-      onClick={() => handleApprove(p._id, 'approved')} 
-      className="flex-1 sm:flex-none flex items-center justify-center gap-1 bg-green-600 text-white px-3 py-2 rounded-lg text-sm hover:bg-green-700 font-medium transition"
-    >
-      <CheckCircle size={16} /> አጽድቅ
-    </button>
-    <button 
-      onClick={() => handleApprove(p._id, 'rejected')} 
-      className="flex-1 sm:flex-none flex items-center justify-center gap-1 bg-red-600 text-white px-3 py-2 rounded-lg text-sm hover:bg-red-700 font-medium transition"
-    >
-      <XCircle size={16} /> ውድቅ አድርግ
-    </button>
-  </div>
-
-</div>
+                  {p.paymentMethod === 'receipt' && (
+                    <div className="flex sm:flex-row gap-2 w-full sm:w-auto">
+                      <button 
+                        onClick={() => handleApprove(p._id, 'approved')} 
+                        className="flex-1 sm:flex-none flex items-center justify-center gap-1 bg-green-600 text-white px-3 py-2 rounded-lg text-sm hover:bg-green-700 font-medium transition"
+                      >
+                        <CheckCircle size={16} /> አጽድቅ
+                      </button>
+                      <button 
+                        onClick={() => handleApprove(p._id, 'rejected')} 
+                        className="flex-1 sm:flex-none flex items-center justify-center gap-1 bg-red-600 text-white px-3 py-2 rounded-lg text-sm hover:bg-red-700 font-medium transition"
+                      >
+                        <XCircle size={16} /> ውድቅ አድርግ
+                      </button>
+                    </div>
+                  )}
+                </div>
               ))}
             </div>
           </div>
@@ -345,7 +329,6 @@ const handlePayment = async (e) => {
           )}
         </div>
 
-        {/* Groups Cards Grid with Skeleton Loader */}
         {loading ? (
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
             <SkeletonCard />
@@ -363,23 +346,13 @@ const handlePayment = async (e) => {
               const isAdmin = user?.role === 'admin';
               const adminId = group.admin?._id || group.admin;
               
-              // ትክክለኛው የአባላት ብዛት (ከአስተዳዳሪው ውጪ)
               const actualMembers = group.members.filter(m => (m._id || m).toString() !== adminId.toString());
               const membersCount = actualMembers.length || 1;
 
               const targetGoal = group.targetGoal || 10000;
-              
-              // 🔴 ትክክለኛው የጠቅላላ የሚጠበቅ ገንዘብ ስሌት (ለ Target ከባለ አባላት ብዛት ጋር ይባዛል)
-              const totalExpectedGoal = group.type === 'lottery' 
-                ? targetGoal 
-                : (targetGoal * membersCount);
-
+              const totalExpectedGoal = group.type === 'lottery' ? targetGoal : (targetGoal * membersCount);
               const estimatedCollected = group.totalCollected || 0;
-
-              // 🔴 ትክክለኛው የዕድገት (Progress) መቶኛ ስሌት
-              const progressPercent = totalExpectedGoal > 0 
-                ? Math.min(100, Math.round((estimatedCollected / totalExpectedGoal) * 100))
-                : 0;
+              const progressPercent = totalExpectedGoal > 0 ? Math.min(100, Math.round((estimatedCollected / totalExpectedGoal) * 100)) : 0;
 
               return (
                 <div key={group._id} className="bg-white rounded-xl shadow-sm border p-5 flex flex-col justify-between">
@@ -421,7 +394,6 @@ const handlePayment = async (e) => {
                         <span className="font-bold text-gray-800">{actualMembers.length} አባላት</span>
                       </div>
 
-                      {/* Progress Bar */}
                       <div className="mt-3">
                         <div className="flex justify-between text-xs font-semibold mb-1">
                           <span className="text-gray-600">እድገት (Progress)</span>
@@ -472,7 +444,6 @@ const handlePayment = async (e) => {
         )}
       </div>
 
-      {/* Modal - Create Ekub */}
       {showCreateModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-xl p-6 w-full max-w-md max-h-[90vh] overflow-y-auto">
@@ -564,7 +535,6 @@ const handlePayment = async (e) => {
         </div>
       )}
 
-      {/* Modal - Add Member by Admin */}
       {showAddMemberModal && selectedGroup && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-xl p-6 w-full max-w-md">
@@ -585,7 +555,6 @@ const handlePayment = async (e) => {
         </div>
       )}
 
-      {/* Modal - Payment */}
       {showPayModal && selectedGroup && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-xl p-6 w-full max-w-md">
@@ -668,7 +637,6 @@ const handlePayment = async (e) => {
         </div>
       )}
 
-      {/* Modal - Ekub Ledger */}
       <EkubLedgerModal
         isOpen={showLedgerModal}
         onClose={() => setShowLedgerModal(false)}
@@ -676,7 +644,6 @@ const handlePayment = async (e) => {
         userRole={user?.role}
       />
 
-      {/* Fullscreen Image Zoom Modal */}
       {previewImage && (
         <div 
           onClick={() => setPreviewImage(null)}
