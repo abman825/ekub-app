@@ -179,7 +179,9 @@ const Dashboard = () => {
     const goalAmount = selectedGroup?.targetGoal || 10000;
     const adminId = selectedGroup?.admin?._id || selectedGroup?.admin;
     const actualMembersCount = selectedGroup?.members?.filter(m => (m._id || m).toString() !== adminId?.toString()).length || 1;
-    const totalExpectedGoal = selectedGroup?.type === 'lottery' ? goalAmount : (goalAmount * actualMembersCount);
+    
+    // 🟢 እዚህ ጋር ተስተካክሏል (በአባላት ብዛት እንዲባዛ ተደርጓል)
+    const totalExpectedGoal = goalAmount * actualMembersCount;
     const estimatedCollected = selectedGroup?.totalCollected || 0;
 
     if (estimatedCollected >= totalExpectedGoal) {
@@ -350,7 +352,10 @@ const Dashboard = () => {
               const membersCount = actualMembers.length || 1;
 
               const targetGoal = group.targetGoal || 10000;
-              const totalExpectedGoal = group.type === 'lottery' ? targetGoal : (targetGoal * membersCount);
+              
+              // 🟢 እዚህ ጋር ተስተካክሏል (ለዕጣ እቁብም በአባላት ብዛት እንዲባዛ ተደርጓል)
+              const totalExpectedGoal = targetGoal * membersCount;
+              
               const estimatedCollected = group.totalCollected || 0;
               const progressPercent = totalExpectedGoal > 0 ? Math.min(100, Math.round((estimatedCollected / totalExpectedGoal) * 100)) : 0;
 
