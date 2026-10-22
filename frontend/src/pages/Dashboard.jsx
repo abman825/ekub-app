@@ -180,13 +180,12 @@ const Dashboard = () => {
     const adminId = selectedGroup?.admin?._id || selectedGroup?.admin;
     const actualMembersCount = selectedGroup?.members?.filter(m => (m._id || m).toString() !== adminId?.toString()).length || 1;
     
-    // 🟢 እዚህ ጋር ተስተካክሏል (በአባላት ብዛት እንዲባዛ ተደርጓል)
     const totalExpectedGoal = goalAmount * actualMembersCount;
     const estimatedCollected = selectedGroup?.totalCollected || 0;
 
     if (estimatedCollected >= totalExpectedGoal) {
       setIsSubmittingPayment(false);
-      return alert('ይህ እቁብ ሙሉ በሙሉ ተጠናቋል! ከዚህ በላይ ክፍያ መክፈል አይቻልም።');
+      return alert('ይህ እቁብ ሙሉ በሙሉ ተጠናቋል! ከዚህ በላይ ክፍያ መፈጸም አይቻልም።');
     }
 
     setIsSubmittingPayment(true);
@@ -277,7 +276,7 @@ const Dashboard = () => {
                           className="w-20 h-20 object-cover rounded-lg border group-hover:opacity-90 shadow-sm transition"
                         />
                         <span className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 rounded-lg flex items-center justify-center text-white text-xs font-bold transition">
-                          🔍 ማግኘት
+                          🔍 ማየት
                         </span>
                       </div>
                     ) : (
@@ -353,9 +352,7 @@ const Dashboard = () => {
 
               const targetGoal = group.targetGoal || 10000;
               
-              // 🟢 እዚህ ጋር ተስተካክሏል (ለዕጣ እቁብም በአባላት ብዛት እንዲባዛ ተደርጓል)
               const totalExpectedGoal = targetGoal * membersCount;
-              
               const estimatedCollected = group.totalCollected || 0;
               const progressPercent = totalExpectedGoal > 0 ? Math.min(100, Math.round((estimatedCollected / totalExpectedGoal) * 100)) : 0;
 
@@ -365,7 +362,7 @@ const Dashboard = () => {
                     <div className="flex justify-between items-start mb-3">
                       <h3 className="font-bold text-lg text-gray-800">{group.title}</h3>
                       <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${group.type === 'target' ? 'bg-purple-100 text-purple-700' : 'bg-green-100 text-green-700'}`}>
-                        {group.type === 'target' ? 'በተቀመጠ ዓማ (Target)' : 'በዕጣ እቁብ'}
+                        {group.type === 'target' ? 'በተቀመጠ ዓማ (Target Goal)' : 'በዕጣ እቁብ'}
                       </span>
                     </div>
                     <p className="text-sm text-gray-500 mb-4">አስተዳዳሪ፡ {group.admin?.name}</p>
@@ -379,7 +376,7 @@ const Dashboard = () => {
                       </div>
                       
                       <div className="flex justify-between">
-                        <span>{group.type === 'target' ? 'የሚሰበሰብ ዓማ፡' : 'የዕጣው ጠቅላላ መጠን'}</span>
+                        <span>{group.type === 'target' ? 'የሚሰበሰብ ዓማ፡' : 'የእቁቡ ጠቅላላ መጠን'}</span>
                         <span className="font-bold text-gray-800">{targetGoal} ብር</span>
                       </div>
 
@@ -428,7 +425,7 @@ const Dashboard = () => {
                           onClick={() => { setSelectedGroup(group); setShowPayModal(true); }}
                           className="w-1/2 bg-emerald-600 text-white py-2 rounded-lg hover:bg-emerald-700 font-medium text-sm flex items-center justify-center gap-1"
                         >
-                          <Wallet size={16} /> ክፍያ ፈጸም
+                          <Wallet size={16} /> ክፍያ ፈጽም
                         </button>
                       )}
                     </div>
@@ -513,7 +510,7 @@ const Dashboard = () => {
               {frequency === 'weekly' && (
                 <div className="bg-blue-50 p-3 rounded-lg border border-blue-200">
                   <label className="block text-sm font-medium text-blue-900 mb-1">
-                    ክፍያው የሚሰበሰብበት ቀን ይመርጡ
+                    ክፍያው የሚሰበሰብበት ቀን ይምረጡ
                   </label>
                   <select
                     className="w-full border border-blue-300 p-2 rounded-lg bg-white"
@@ -568,7 +565,7 @@ const Dashboard = () => {
 
             <form onSubmit={handlePayment} className="space-y-4">
               <div>
-                <label className="block text-sm font-medium mb-1">የክፍያ መሠረቻ ይምረጡ</label>
+                <label className="block text-sm font-medium mb-1">የክፍያ መሣሪያ ይምረጡ</label>
                 <div className="grid grid-cols-2 gap-2">
                   <button
                     type="button"
@@ -616,7 +613,7 @@ const Dashboard = () => {
                 </div>
               ) : (
                 <p className="text-xs text-gray-500 bg-blue-50 p-3 rounded border border-blue-200">
-                  'ክፍያ ፈጸም' የሚለውን ሲጫኑ በቀጥታ ወደ Chapa ደህንነቱ የተጠበቀ የክፍያ ገጽ ይወስድዎታል።
+                  'ክፍያ ፈጽም' የሚለውን ሲጫኑ በቀጥታ ወደ Chapa ደህንነቱ የተጠበቀ የክፍያ ገጽ ይመራዎታል።
                 </p>
               )}
 
@@ -630,10 +627,10 @@ const Dashboard = () => {
                   {isSubmittingPayment ? (
                     <>
                       <Loader2 size={18} className="animate-spin" />
-                      <span>እየተከናወነ...</span>
+                      <span>እየተላከ ነው...</span>
                     </>
                   ) : (
-                    <span>ክፍያ ፈጸም</span>
+                    <span>ክፍያ ፈጽም</span>
                   )}
                 </button>
               </div>
