@@ -13,7 +13,7 @@ const EkubLedgerModal = ({ isOpen, onClose, group, userRole }) => {
   const [showWinnersHistory, setShowWinnersHistory] = useState(false);
 
   // Search & Filter States
-  const [statusFilter, setStatusFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState('all'); // 'all', 'approved', 'pending', 'rejected'
   const [searchTerm, setSearchTerm] = useState('');
   const [todayFilter, setTodayFilter] = useState('all'); // 'all', 'paidToday', 'unpaidToday'
 
@@ -61,21 +61,19 @@ const EkubLedgerModal = ({ isOpen, onClose, group, userRole }) => {
     return m._id ? m._id.toString() !== adminId?.toString() : false;
   });
 
-  // Helper: Check if member paid for the current round / today
+  // Helper: Check if member paid for the current round
   const getMemberRoundStatus = (memberId) => {
     const memberApprovedPayments = ledger.filter(
       p => (p.member?._id || p.member)?.toString() === memberId.toString() && p.status === 'approved'
     );
     const paidRoundsCount = memberApprovedPayments.length;
 
-    // Determine max rounds paid across members to gauge current expected round
     const allMemberCounts = membersList.map(m => {
       return ledger.filter(p => (p.member?._id || p.member)?.toString() === m._id.toString() && p.status === 'approved').length;
     });
-    const currentMaxRound = Math.max(0, ...allMemberCounts);
-
-    // If member has paid up to the current maximum round, they are up to date (Green), else Red
-    const isPaidUpToDate = paidRoundsCount >= (currentMaxRound === 0 ? 1 : currentMaxRound);
+    
+    const groupMaxRound = allMemberCounts.length > 0 ? Math.max(...allMemberCounts) : 0;
+    const isPaidUpToDate = groupMaxRound === 0 ? paidRoundsCount > 0 : paidRoundsCount >= groupMaxRound;
 
     return {
       paidRoundsCount,
@@ -83,7 +81,7 @@ const EkubLedgerModal = ({ isOpen, onClose, group, userRole }) => {
     };
   };
 
-  // Filtered Members List for Admin with Status Colors & Search
+  // Filtered Members List for Admin
   const filteredMembersList = membersList.filter(m => {
     const nameMatches = m.name?.toLowerCase().includes(searchTerm.toLowerCase());
     const phoneMatches = m.phone?.includes(searchTerm);
@@ -97,13 +95,9 @@ const EkubLedgerModal = ({ isOpen, onClose, group, userRole }) => {
 
   const formatPhoneNumber = (phone) => {
     if (!phone) return '0911****90';
-    if (userRole === 'admin') {
-      return phone;
-    }
+    if (userRole === 'admin') return phone;
     if (phone.length < 8) return phone;
-    const start = phone.slice(0, 4);
-    const end = phone.slice(-2);
-    return `${start}****${end}`;
+    return `${phone.slice(0, 4)}****${phone.slice(-2)}`;
   };
 
   const handleDrawLottery = async () => {
@@ -120,12 +114,7 @@ const EkubLedgerModal = ({ isOpen, onClose, group, userRole }) => {
         });
         if (data.group) {
           setCurrentGroup(data.group);
-          
-          confetti({
-            particleCount: 120,
-            spread: 80,
-            origin: { y: 0.6 }
-          });
+          confetti({ particleCount: 120, spread: 80, origin: { y: 0.6 } });
         }
       } catch (err) {
         console.error('ዕጣ ማውጣት አልተቻለም', err);
@@ -150,7 +139,6 @@ const EkubLedgerModal = ({ isOpen, onClose, group, userRole }) => {
     const worksheet = XLSX.utils.json_to_sheet(excelData);
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, "የክፍያ ደፍተር");
-    
     XLSX.writeFile(workbook, `${currentGroup.title}_Ledger_Report.xlsx`);
   };
 
@@ -176,7 +164,7 @@ const EkubLedgerModal = ({ isOpen, onClose, group, userRole }) => {
 
   const displayPayments = processedPayments.reverse();
 
-  // Status Filter Logic
+  // 🟢 የክፍያ ስቴተስ ማጣሪያ (Status Filter) መልሶ ተካቷል!
   const filteredPayments = displayPayments.filter((item) => {
     return statusFilter === 'all' || item.status === statusFilter;
   });
@@ -186,9 +174,8 @@ const EkubLedgerModal = ({ isOpen, onClose, group, userRole }) => {
     .reduce((sum, p) => sum + p.amount, 0);
 
   const totalPaidRounds = approvedCount;
-
-  const goalAmount = currentGroup.targetGoal && currentGroup.targetGoal > 0 ? currentGroup.targetGoal : 10000;
-  const contribution = currentGroup.contributionAmount > 0 ? currentGroup.contributionAmount : 1000;
+  const goalAmount = currentGroup.targetGoal || 10000;
+  const contribution = currentGroup.contributionAmount || 1000;
 
   const totalRequiredRounds = Math.ceil(goalAmount / contribution);
   const remainingRounds = Math.max(0, totalRequiredRounds - totalPaidRounds);
@@ -214,7 +201,6 @@ const EkubLedgerModal = ({ isOpen, onClose, group, userRole }) => {
               <button
                 onClick={handleExportExcel}
                 className="flex items-center gap-1 bg-green-600 text-white px-3 py-1.5 rounded-lg text-xs font-semibold hover:bg-green-700 transition"
-                title="በኤክሴል ቅርጸ 导出"
               >
                 <FileSpreadsheet size={16} /> ኤክሴል
               </button>
@@ -222,7 +208,6 @@ const EkubLedgerModal = ({ isOpen, onClose, group, userRole }) => {
             <button
               onClick={handlePrintReceipt}
               className="flex items-center gap-1 bg-blue-600 text-white px-3 py-1.5 rounded-lg text-xs font-semibold hover:bg-blue-700 transition"
-              title="ደረሰኝ ማተም / PDF 导出"
             >
               <Printer size={16} /> ደረሰኝ / PDF
             </button>
@@ -230,7 +215,7 @@ const EkubLedgerModal = ({ isOpen, onClose, group, userRole }) => {
           </div>
         </div>
 
-        {/* Winners History Accordion */}
+        {/* Winners History */}
         {currentGroup?.type === 'lottery' && currentGroup?.winnersHistory && currentGroup.winnersHistory.length > 0 && (
           <div className="mb-4 bg-green-50/60 border border-green-200 rounded-xl overflow-hidden shadow-sm">
             <button
@@ -238,7 +223,7 @@ const EkubLedgerModal = ({ isOpen, onClose, group, userRole }) => {
               className="w-full p-3.5 flex justify-between items-center text-left hover:bg-green-100/50 transition font-bold text-green-900 text-sm"
             >
               <span className="flex items-center gap-2">
-                🏆 ባለፈ ዕጣ አሸናፊዎች (በቀደም የተከተለ) 
+                🏆 ባለፈ ዕጣ አሸናፊዎች 
                 <span className="bg-green-600 text-white text-xs px-2 py-0.5 rounded-full font-normal">
                   {currentGroup.winnersHistory.length}
                 </span>
@@ -256,17 +241,10 @@ const EkubLedgerModal = ({ isOpen, onClose, group, userRole }) => {
                   const phoneToShow = memberInfo.phone ? formatPhoneNumber(memberInfo.phone) : '';
 
                   return (
-                    <div 
-                      key={index} 
-                      className="flex justify-between items-center bg-green-50/30 p-2.5 rounded-lg border border-green-100 text-xs"
-                    >
+                    <div key={index} className="flex justify-between items-center bg-green-50/30 p-2.5 rounded-lg border border-green-100 text-xs">
                       <div className="flex items-center gap-2">
-                        <span className="bg-green-600 text-white font-bold rounded-full w-5 h-5 flex items-center justify-center text-[10px]">
-                          {index + 1}
-                        </span>
-                        <span className="font-bold text-gray-800">
-                          {nameToShow} {phoneToShow && `(${phoneToShow})`}
-                        </span>
+                        <span className="bg-green-600 text-white font-bold rounded-full w-5 h-5 flex items-center justify-center text-[10px]">{index + 1}</span>
+                        <span className="font-bold text-gray-800">{nameToShow} {phoneToShow && `(${phoneToShow})`}</span>
                       </div>
                       <span className="text-gray-500 font-medium">
                         {winner.wonAt ? new Date(winner.wonAt).toLocaleDateString() : `ዙር ${index + 1}`}
@@ -292,7 +270,7 @@ const EkubLedgerModal = ({ isOpen, onClose, group, userRole }) => {
             </div>
           )}
 
-          {/* Admin Lottery System Button */}
+          {/* Admin Lottery Draw Button */}
           {userRole === 'admin' && currentGroup.type === 'lottery' && (
             <div className="mb-4 bg-gradient-to-r from-purple-50 to-indigo-50 p-3 rounded-xl border border-purple-200 flex flex-col sm:flex-row justify-between items-center gap-3 no-print">
               <div>
@@ -322,26 +300,43 @@ const EkubLedgerModal = ({ isOpen, onClose, group, userRole }) => {
                   <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
                     <h4 className="text-xs font-bold text-gray-700">የአባላት የክፍያ ሁኔታ (የከፈሉ/ያልከፈሉ)</h4>
                     
-                    {/* Paid vs Unpaid Filter Buttons */}
-                    <div className="flex items-center gap-1.5">
-                      <button
-                        onClick={() => setTodayFilter('all')}
-                        className={`px-2.5 py-1 rounded-lg text-[11px] font-bold border transition ${todayFilter === 'all' ? 'bg-gray-800 text-white' : 'bg-white text-gray-700'}`}
-                      >
-                        ሁሉንም ({membersList.length})
-                      </button>
-                      <button
-                        onClick={() => setTodayFilter('paidToday')}
-                        className={`px-2.5 py-1 rounded-lg text-[11px] font-bold border transition ${todayFilter === 'paidToday' ? 'bg-green-600 text-white' : 'bg-green-50 text-green-700 border-green-200'}`}
-                      >
-                        የከፈሉ (Green)
-                      </button>
-                      <button
-                        onClick={() => setTodayFilter('unpaidToday')}
-                        className={`px-2.5 py-1 rounded-lg text-[11px] font-bold border transition ${todayFilter === 'unpaidToday' ? 'bg-red-600 text-white' : 'bg-red-50 text-red-700 border-red-200'}`}
-                      >
-                        ያልከፈሉ (Red)
-                      </button>
+                    <div className="flex items-center gap-2">
+                      {/* 🟢 1. የክፍያ ስቴተስ ማጣሪያ (Status Filter Dropdown) መልሶ ተካቷል */}
+                      <div className="flex items-center gap-1">
+                        <Filter size={12} className="text-gray-500" />
+                        <select
+                          value={statusFilter}
+                          onChange={(e) => setStatusFilter(e.target.value)}
+                          className="text-[11px] border border-gray-300 rounded-lg px-2 py-1 bg-white focus:outline-none focus:ring-1 focus:ring-blue-500 font-medium"
+                        >
+                          <option value="all">ሁሉንም ስቴተስ</option>
+                          <option value="approved">ጸድቆ (Approved)</option>
+                          <option value="pending">በመጠባበቅ ላይ (Pending)</option>
+                          <option value="rejected">ውድቅ የተደረገ (Rejected)</option>
+                        </select>
+                      </div>
+
+                      {/* 2. የከፈሉ / ያልከፈሉ ዱግማዎች (Green vs Red Filters) */}
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={() => setTodayFilter('all')}
+                          className={`px-2 py-1 rounded-lg text-[10px] font-bold border transition ${todayFilter === 'all' ? 'bg-gray-800 text-white' : 'bg-white text-gray-700'}`}
+                        >
+                          ሁሉ
+                        </button>
+                        <button
+                          onClick={() => setTodayFilter('paidToday')}
+                          className={`px-2 py-1 rounded-lg text-[10px] font-bold border transition ${todayFilter === 'paidToday' ? 'bg-green-600 text-white' : 'bg-green-50 text-green-700 border-green-200'}`}
+                        >
+                          የከፈሉ
+                        </button>
+                        <button
+                          onClick={() => setTodayFilter('unpaidToday')}
+                          className={`px-2.5 py-1 rounded-lg text-[10px] font-bold border transition ${todayFilter === 'unpaidToday' ? 'bg-red-600 text-white' : 'bg-red-50 text-red-700 border-red-200'}`}
+                        >
+                          ያልከፈሉ
+                        </button>
+                      </div>
                     </div>
                   </div>
 
@@ -425,12 +420,13 @@ const EkubLedgerModal = ({ isOpen, onClose, group, userRole }) => {
                         <th className="p-2.5">መጠን</th>
                         <th className="p-2.5">የክፍያ መንገድ</th>
                         <th className="p-2.5">ሁኔታ</th>
+                        <th className="p-2.5 no-print">ስክሪንሾት / Ref</th>
                       </tr>
                     </thead>
                     <tbody>
                       {filteredPayments.length === 0 ? (
                         <tr>
-                          <td colSpan={5} className="text-center py-6 text-gray-500 text-xs">
+                          <td colSpan={6} className="text-center py-6 text-gray-500 text-xs">
                             ምንም የተመዘገበ የክፍያ መረጃ የለም።
                           </td>
                         </tr>
@@ -457,6 +453,20 @@ const EkubLedgerModal = ({ isOpen, onClose, group, userRole }) => {
                                 <span className="flex items-center gap-1 text-yellow-600 font-medium text-[11px] bg-yellow-50 px-2 py-0.5 rounded-full w-fit">
                                   <Clock size={12} /> በመጠባበቅ ላይ
                                 </span>
+                              )}
+                              {item.status === 'rejected' && (
+                                <span className="flex items-center gap-1 text-red-600 font-medium text-[11px] bg-red-50 px-2 py-0.5 rounded-full w-fit">
+                                  <XCircle size={12} /> ውድቅ የተደረገ
+                                </span>
+                              )}
+                            </td>
+                            <td className="p-2.5 no-print">
+                              {item.receiptUrl ? (
+                                <a href={item.receiptUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 underline text-[11px]">
+                                  ስክሪንሾት
+                                </a>
+                              ) : (
+                                <span className="text-[10px] text-gray-400">Ref: {item.transactionRef || 'N/A'}</span>
                               )}
                             </td>
                           </tr>
