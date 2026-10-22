@@ -2,7 +2,10 @@ import React, { useState, useEffect, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import API from '../services/api';
 import { AuthContext } from '../context/AuthContext';
-import { PlusCircle, Wallet, CheckCircle, XCircle, FileText, UserPlus, Loader2 } from 'lucide-react';
+import { 
+  PlusCircle, Wallet, CheckCircle, XCircle, FileText, UserPlus, 
+  Loader2, LayoutDashboard, Users, CreditCard, LogOut, Menu, X 
+} from 'lucide-react';
 import EkubLedgerModal from '../components/EkubLedgerModal';
 import SkeletonCard from '../components/SkeletonCard';
 
@@ -17,6 +20,10 @@ const Dashboard = () => {
   const [showPayModal, setShowPayModal] = useState(false);
   const [showLedgerModal, setShowLedgerModal] = useState(false);
   const [selectedGroup, setSelectedGroup] = useState(null);
+
+  // Navigation / Sidebar Active Tab State ('dashboard', 'payments')
+  const [activeTab, setActiveTab] = useState('dashboard');
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   // Add Member Modal State
   const [showAddMemberModal, setShowAddMemberModal] = useState(false);
@@ -75,9 +82,7 @@ const Dashboard = () => {
       const { data } = await API.get(endpoint);
       
       alert('🎉 የ Chapa ክፍያዎ በስኬት ተረጋግጦ ጸድቋል!');
-      
       window.history.replaceState({}, document.title, window.location.pathname);
-      
       fetchGroups();
 
       if (data.contribution && data.contribution.ekubGroup) {
@@ -113,7 +118,7 @@ const Dashboard = () => {
       const { data } = await API.get('/payment/pending');
       setPendingPayments(data);
     } catch (err) {
-      console.error('የሚጠበቁ ክፍያዎችን ማግኘት አልተቻለም', err);
+      console.error('የሚጠብቁ ክፍያዎችን ማግኘት አልተቻለም', err);
     }
   };
 
@@ -154,7 +159,7 @@ const Dashboard = () => {
       setDrawDay(1);
       fetchGroups();
     } catch (err) {
-      alert(err.response?.data?.message || 'እቁብ መፍጠር አልተቻለም');
+      alert(err.response?.data?.message || 'እቁብ መፈጠር አልተቻለም');
     }
   };
 
@@ -185,7 +190,7 @@ const Dashboard = () => {
 
     if (estimatedCollected >= totalExpectedGoal) {
       setIsSubmittingPayment(false);
-      return alert('ይህ እቁብ ሙሉ በሙሉ ተጠናቋል! ከዚህ በላይ ክፍያ መፈጸም አይቻልም።');
+      return alert('ይህ እቁብ ሙሉ በሙሉ ተሳክቷል! ከዚህ በላይ ክፍያ መፈጸም አይቻልም።');
     }
 
     setIsSubmittingPayment(true);
@@ -215,7 +220,7 @@ const Dashboard = () => {
     } else {
       if (!receiptFile && !txRef) {
         setIsSubmittingPayment(false);
-        return alert('እባክዎን የባንክ ደረሰኝ ምስል ወይም የትራንዛክሽን ቁጥር ያስገቡ!');
+        return alert('እባክዎን የባንክ ደረሰኝ ፎቶ ወይም የትራንዛክሽን ቁጥር ያስገቡ!');
       }
 
       const formData = new FormData();
@@ -242,253 +247,342 @@ const Dashboard = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <nav className="bg-white border-b px-6 py-4 flex justify-between items-center shadow-sm">
-        <h1 className="text-xl font-bold text-blue-600">እቁብ</h1>
-        <div className="flex items-center gap-4">
-          <span className="text-sm font-medium text-gray-700"> {user?.name} ({user?.role})</span>
-          <button 
-            onClick={handleLogout} 
-            className="text-sm bg-red-50 text-red-600 px-3 py-1.5 rounded-lg border border-red-200 hover:bg-red-100 font-medium transition"
-          >
-            ውጣ
+    <div className="min-h-screen bg-gray-50 flex">
+      
+      {/* 📱 SIDEBAR NAVIGATION */}
+      <aside className={`fixed inset-y-0 left-0 z-50 w-64 bg-white border-r border-gray-200 transform transition-transform duration-300 ease-in-out md:translate-x-0 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+        <div className="h-16 flex items-center justify-between px-6 border-b border-gray-100">
+          <div className="flex items-center gap-2">
+            <div className="bg-blue-600 text-white font-extrabold w-9 h-9 rounded-xl flex items-center justify-center shadow-md">
+              እ
+            </div>
+            <h1 className="text-xl font-extrabold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+              እቁብ App
+            </h1>
+          </div>
+          <button onClick={() => setIsSidebarOpen(false)} className="md:hidden text-gray-400 hover:text-gray-600">
+            <X size={20} />
           </button>
         </div>
-      </nav>
 
-      <div className="max-w-6xl mx-auto p-6">
-        {user?.role === 'admin' && pendingPayments.length > 0 && (
-          <div className="bg-white p-6 rounded-xl shadow-sm border border-yellow-300 mb-8 bg-yellow-50/20">
-            <h2 className="text-lg font-bold text-gray-800 mb-4">የሚጠበቁ የክፍያ ደረሰኞች ({pendingPayments.length})</h2>
-            <div className="space-y-4">
-              {pendingPayments.map((p) => (
-                <div key={p._id} className="flex flex-col sm:flex-row justify-between items-start sm:items-center p-4 border rounded-lg bg-white shadow-sm gap-4">
-                  <div className="flex items-center gap-4 w-full sm:w-auto">
-                    {p.receiptUrl ? (
-                      <div 
-                        onClick={() => setPreviewImage(p.receiptUrl)}
-                        className="cursor-pointer group relative flex-shrink-0"
-                        title="በግልጽ ለማየት ክሊክ"
-                      >
-                        <img 
-                          src={p.receiptUrl} 
-                          alt="የባንክ ደረሰኝ" 
-                          className="w-20 h-20 object-cover rounded-lg border group-hover:opacity-90 shadow-sm transition"
-                        />
-                        <span className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 rounded-lg flex items-center justify-center text-white text-xs font-bold transition">
-                          🔍 ማየት
-                        </span>
-                      </div>
-                    ) : (
-                      <div className="w-20 h-20 bg-gray-100 rounded-lg border flex items-center justify-center text-xs text-gray-400 text-center p-1 flex-shrink-0">
-                        {p.paymentMethod === 'chapa' ? 'Chapa Online' : 'ምስል የለውም'}
-                      </div>
-                    )}
-
-                    <div>
-                      <p className="font-bold text-gray-800">{p.member?.name} ({p.member?.phone})</p>
-                      <p className="text-sm text-gray-600">
-                        እቁብ፡ <span className="font-semibold">{p.ekubGroup?.title}</span> | መጠን፡ <span className="font-semibold text-green-600">{p.amount} ብር</span>
-                      </p>
-                      {p.transactionRef && (
-                        <p className="text-xs text-gray-600 font-semibold mt-1">Ref No: {p.transactionRef}</p>
-                      )}
-                    </div>
-                  </div>
-
-                  {p.paymentMethod === 'receipt' && (
-                    <div className="flex sm:flex-row gap-2 w-full sm:w-auto">
-                      <button 
-                        onClick={() => handleApprove(p._id, 'approved')} 
-                        className="flex-1 sm:flex-none flex items-center justify-center gap-1 bg-green-600 text-white px-3 py-2 rounded-lg text-sm hover:bg-green-700 font-medium transition"
-                      >
-                        <CheckCircle size={16} /> አጽድቅ
-                      </button>
-                      <button 
-                        onClick={() => handleApprove(p._id, 'rejected')} 
-                        className="flex-1 sm:flex-none flex items-center justify-center gap-1 bg-red-600 text-white px-3 py-2 rounded-lg text-sm hover:bg-red-700 font-medium transition"
-                      >
-                        <XCircle size={16} /> ውድቅ አድርግ
-                      </button>
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="text-2xl font-bold text-gray-800">የእቁብ ቢሮዎች</h2>
-          {user?.role === 'admin' && (
-            <button
-              onClick={() => setShowCreateModal(true)}
-              className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition"
-            >
-              <PlusCircle size={18} /> አዲስ እቁብ ፈጠር
-            </button>
-          )}
+        {/* User Profile */}
+        <div className="p-4 mx-4 my-4 bg-blue-50/60 rounded-2xl border border-blue-100/60">
+          <p className="text-xs text-gray-500 font-medium">እንኳን ደህና መጡ,</p>
+          <p className="text-sm font-bold text-gray-800 truncate">{user?.name}</p>
+          <span className="inline-block mt-1 px-2 py-0.5 bg-blue-600 text-white text-[10px] font-bold rounded-md uppercase tracking-wider">
+            {user?.role}
+          </span>
         </div>
 
-        {loading ? (
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <SkeletonCard />
-            <SkeletonCard />
-            <SkeletonCard />
+        {/* Sidebar Links */}
+        <nav className="p-4 space-y-1.5">
+          <button
+            onClick={() => { setActiveTab('dashboard'); setIsSidebarOpen(false); }}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-semibold text-sm transition ${
+              activeTab === 'dashboard' 
+                ? 'bg-blue-600 text-white shadow-md shadow-blue-500/20' 
+                : 'text-gray-600 hover:bg-gray-100'
+            }`}
+          >
+            <LayoutDashboard size={18} /> ዳሽቦርድ (Dashboard)
+          </button>
+
+          {user?.role === 'admin' && (
+            <button
+              onClick={() => { setActiveTab('payments'); setIsSidebarOpen(false); }}
+              className={`w-full flex items-center justify-between px-4 py-3 rounded-xl font-semibold text-sm transition ${
+                activeTab === 'payments' 
+                  ? 'bg-blue-600 text-white shadow-md shadow-blue-500/20' 
+                  : 'text-gray-600 hover:bg-gray-100'
+              }`}
+            >
+              <div className="flex items-center gap-3">
+                <CreditCard size={18} /> የክፍያ ማረጋገጫዎች
+              </div>
+              {pendingPayments.length > 0 && (
+                <span className={`text-xs px-2 py-0.5 rounded-full font-bold ${activeTab === 'payments' ? 'bg-white text-blue-600' : 'bg-red-500 text-white'}`}>
+                  {pendingPayments.length}
+                </span>
+              )}
+            </button>
+          )}
+        </nav>
+
+        {/* Sidebar Footer Logout */}
+        <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-100 bg-white">
+          <button
+            onClick={handleLogout}
+            className="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl font-semibold text-sm text-red-600 bg-red-50 hover:bg-red-100 transition border border-red-100"
+          >
+            <LogOut size={18} /> ከሂሳብ ውጣ (Logout)
+          </button>
+        </div>
+      </aside>
+
+      {/* MAIN CONTENT CONTAINER */}
+      <div className="flex-1 md:ml-64 flex flex-col min-h-screen">
+        
+        {/* Top Navbar */}
+        <header className="h-16 bg-white border-b border-gray-200 px-6 flex justify-between items-center sticky top-0 z-30 shadow-sm">
+          <button 
+            onClick={() => setIsSidebarOpen(true)}
+            className="md:hidden text-gray-600 hover:text-gray-900 p-2 rounded-lg hover:bg-gray-100"
+          >
+            <Menu size={22} />
+          </button>
+
+          <div className="hidden md:block">
+            <h2 className="text-sm font-bold text-gray-800">
+              {activeTab === 'dashboard' ? '📊 የእቁብ ቡድኖች ማጠቃለያ' : '💳 የባንክ ክፍያ ማረጋገጫ ክፍሎች'}
+            </h2>
           </div>
-        ) : groups.length === 0 ? (
-          <div className="text-center py-12 bg-white rounded-xl border p-8 text-gray-500">
-            ምንም የእቁብ ቢሮዎች የሉም።
+
+          <div className="flex items-center gap-3">
+            <span className="text-xs font-semibold text-gray-500 hidden sm:inline">አስተዳዳሪ፡ {user?.name}</span>
+            <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-blue-600 to-indigo-600 text-white font-bold flex items-center justify-center text-xs shadow">
+              {user?.name?.charAt(0) || 'U'}
+            </div>
           </div>
-        ) : (
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {groups.map((group) => {
-              const isMember = group.members.some(m => m._id === user?._id);
-              const isAdmin = user?.role === 'admin';
-              const adminId = group.admin?._id || group.admin;
-              
-              const actualMembers = group.members.filter(m => (m._id || m).toString() !== adminId.toString());
-              const membersCount = actualMembers.length || 1;
+        </header>
 
-              const targetGoal = group.targetGoal || 10000;
-              
-              const totalExpectedGoal = targetGoal * membersCount;
-              const estimatedCollected = group.totalCollected || 0;
-              const progressPercent = totalExpectedGoal > 0 ? Math.min(100, Math.round((estimatedCollected / totalExpectedGoal) * 100)) : 0;
-
-              return (
-                <div key={group._id} className="bg-white rounded-xl shadow-sm border p-5 flex flex-col justify-between">
-                  <div>
-                    <div className="flex justify-between items-start mb-3">
-                      <h3 className="font-bold text-lg text-gray-800">{group.title}</h3>
-                      <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${group.type === 'target' ? 'bg-purple-100 text-purple-700' : 'bg-green-100 text-green-700'}`}>
-                        {group.type === 'target' ? 'በተቀመጠ ዓማ (Target Goal)' : 'በዕጣ እቁብ'}
-                      </span>
-                    </div>
-                    <p className="text-sm text-gray-500 mb-4">አስተዳዳሪ፡ {group.admin?.name}</p>
-
-                    <div className="space-y-2 text-sm text-gray-600 mb-4">
-                      <div className="flex justify-between">
-                        <span>የክፍያ መጠን</span>
-                        <span className="font-bold text-gray-800">
-                          {group.contributionAmount} ብር ({group.frequency === 'weekly' ? `በሳምንት - ${getDayName(group.drawDay)}` : 'በቀን'})
-                        </span>
-                      </div>
-                      
-                      <div className="flex justify-between">
-                        <span>{group.type === 'target' ? 'የሚሰበሰብ ዓማ፡' : 'የእቁቡ ጠቅላላ መጠን'}</span>
-                        <span className="font-bold text-gray-800">{targetGoal} ብር</span>
-                      </div>
-
-                      {group.type === 'lottery' && (
-                        <div className="flex justify-between text-blue-600 font-semibold bg-blue-50 px-2 py-1 rounded">
-                          <span>የዕጣ ማውጫ ጊዜ፡</span>
-                          <span>
-                            {group.frequency === 'weekly' 
-                              ? `በ 7 ቀን (${getDayName(group.drawDay)})` 
-                              : `በ ${group.drawIntervalDays || 1} ቀን`}
-                          </span>
-                        </div>
-                      )}
-                      
-                      <div className="flex justify-between">
-                        <span>አባላት፡</span>
-                        <span className="font-bold text-gray-800">{actualMembers.length} አባላት</span>
-                      </div>
-
-                      <div className="mt-3">
-                        <div className="flex justify-between text-xs font-semibold mb-1">
-                          <span className="text-gray-600">እድገት (Progress)</span>
-                          <span className="text-blue-600">{progressPercent}% ተሳክቷል</span>
-                        </div>
-                        <div className="w-full bg-gray-200 rounded-full h-2.5 overflow-hidden">
-                          <div 
-                            className="bg-blue-600 h-2.5 rounded-full transition-all duration-500" 
-                            style={{ width: `${progressPercent}%` }}
-                          ></div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="flex flex-col gap-2 mt-4">
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => { setSelectedGroup(group); setShowLedgerModal(true); }}
-                        className={`${isAdmin ? 'w-full' : 'w-1/2'} border border-blue-600 text-blue-600 py-2 rounded-lg hover:bg-blue-50 font-medium text-sm flex items-center justify-center gap-1`}
-                      >
-                        📋 የእቁብ ደፍተር
-                      </button>
-                      
-                      {!isAdmin && isMember && (
-                        <button
-                          onClick={() => { setSelectedGroup(group); setShowPayModal(true); }}
-                          className="w-1/2 bg-emerald-600 text-white py-2 rounded-lg hover:bg-emerald-700 font-medium text-sm flex items-center justify-center gap-1"
-                        >
-                          <Wallet size={16} /> ክፍያ ፈጽም
-                        </button>
-                      )}
-                    </div>
-
-                    {isAdmin && (
-                      <button
-                        onClick={() => { setSelectedGroup(group); setShowAddMemberModal(true); }}
-                        className="w-full bg-indigo-50 text-indigo-700 border border-indigo-200 py-2 rounded-lg hover:bg-indigo-100 font-medium text-sm flex items-center justify-center gap-1 transition"
-                      >
-                        <UserPlus size={16} /> አባል በስልክ ቁጥር ጨምር
-                      </button>
-                    )}
-                  </div>
+        {/* Page Body Content */}
+        <main className="flex-1 p-6 max-w-7xl mx-auto w-full">
+          
+          {/* TAB 1: DASHBOARD & GROUPS VIEW */}
+          {activeTab === 'dashboard' && (
+            <>
+              {/* GROUPS HEADER & CREATE BUTTON */}
+              <div className="flex justify-between items-center mb-6">
+                <div>
+                  <h2 className="text-2xl font-black text-gray-900 tracking-tight">የእቁብ ቡድኖች</h2>
+                  <p className="text-xs text-gray-500 mt-0.5">የእቁብ መዋጮዎችን እና የዕጣ ዝርዝሮችን እዚህ ይከታተሉ።</p>
                 </div>
-              );
-            })}
-          </div>
-        )}
+                {user?.role === 'admin' && (
+                  <button
+                    onClick={() => setShowCreateModal(true)}
+                    className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-xl font-bold text-xs shadow-md shadow-blue-500/20 transition"
+                  >
+                    <PlusCircle size={16} /> አዲስ እቁብ ፍጠር
+                  </button>
+                )}
+              </div>
+
+              {/* GROUPS GRID */}
+              {loading ? (
+                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  <SkeletonCard />
+                  <SkeletonCard />
+                  <SkeletonCard />
+                </div>
+              ) : groups.length === 0 ? (
+                <div className="text-center py-16 bg-white rounded-2xl border border-dashed p-8 text-gray-400">
+                  <p className="text-sm">ምንም የእቁብ ቡድኖች አልተገኙም።</p>
+                </div>
+              ) : (
+                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {groups.map((group) => {
+                    const isMember = group.members.some(m => m._id === user?._id);
+                    const isAdmin = user?.role === 'admin';
+                    const adminId = group.admin?._id || group.admin;
+                    
+                    const actualMembers = group.members.filter(m => (m._id || m).toString() !== adminId.toString());
+                    const membersCount = actualMembers.length || 1;
+
+                    const targetGoal = group.targetGoal || 10000;
+                    const totalExpectedGoal = targetGoal * membersCount;
+                    const estimatedCollected = group.totalCollected || 0;
+                    const progressPercent = totalExpectedGoal > 0 ? Math.min(100, Math.round((estimatedCollected / totalExpectedGoal) * 100)) : 0;
+
+                    return (
+                      <div key={group._id} className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 flex flex-col justify-between hover:shadow-md transition">
+                        <div>
+                          <div className="flex justify-between items-start mb-3">
+                            <h3 className="font-bold text-base text-gray-900">{group.title}</h3>
+                            <span className={`text-[10px] px-2.5 py-1 rounded-full font-bold uppercase tracking-wide ${group.type === 'target' ? 'bg-purple-50 text-purple-700 border border-purple-100' : 'bg-emerald-50 text-emerald-700 border border-emerald-100'}`}>
+                              {group.type === 'target' ? 'Target Goal' : 'Lottery'}
+                            </span>
+                          </div>
+                          <p className="text-xs text-gray-400 mb-4">አስተዳዳሪ፡ {group.admin?.name}</p>
+
+                          <div className="space-y-2.5 text-xs text-gray-600 mb-5">
+                            <div className="flex justify-between">
+                              <span className="text-gray-400">የክፍያ መጠን</span>
+                              <span className="font-bold text-gray-900">
+                                {group.contributionAmount} ብር ({group.frequency === 'weekly' ? `በሳምንት - ${getDayName(group.drawDay)}` : 'ቀን'} )
+                              </span>
+                            </div>
+                            
+                            <div className="flex justify-between">
+                              <span className="text-gray-400">{group.type === 'target' ? 'የሚሰበሰብ ዒላማ' : 'ጠቅላላ የዕጣ መጠን'}</span>
+                              <span className="font-bold text-gray-900">{targetGoal} ብር</span>
+                            </div>
+
+                            {group.type === 'lottery' && (
+                              <div className="flex justify-between text-blue-600 font-semibold bg-blue-50/70 px-2.5 py-1.5 rounded-lg border border-blue-100">
+                                <span>የዕጣ ማውጫ ጊዜ</span>
+                                <span>
+                                  {group.frequency === 'weekly' 
+                                    ? `በ 7 ቀን (${getDayName(group.drawDay)})` 
+                                    : `በ ${group.drawIntervalDays || 1} ቀን`}
+                                </span>
+                              </div>
+                            )}
+                            
+                            <div className="flex justify-between">
+                              <span className="text-gray-400">አባላት</span>
+                              <span className="font-bold text-gray-900">{actualMembers.length} አባላት</span>
+                            </div>
+
+                            <div className="mt-4 pt-2">
+                              <div className="flex justify-between text-[11px] font-bold mb-1.5">
+                                <span className="text-gray-500">እድገት (Progress)</span>
+                                <span className="text-blue-600">{progressPercent}% ተሳክቷል</span>
+                              </div>
+                              <div className="w-full bg-gray-100 rounded-full h-2 overflow-hidden">
+                                <div 
+                                  className="bg-blue-600 h-2 rounded-full transition-all duration-500" 
+                                  style={{ width: `${progressPercent}%` }}
+                                ></div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="flex flex-col gap-2 pt-2 border-t border-gray-50">
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => { setSelectedGroup(group); setShowLedgerModal(true); }}
+                              className={`${isAdmin ? 'w-full' : 'w-1/2'} border border-blue-600 text-blue-600 py-2 rounded-xl hover:bg-blue-50 font-bold text-xs flex items-center justify-center gap-1.5 transition`}
+                            >
+                              📋 የእቁብ ደፍተር
+                            </button>
+                            
+                            {!isAdmin && isMember && (
+                              <button
+                                onClick={() => { setSelectedGroup(group); setShowPayModal(true); }}
+                                className="w-1/2 bg-emerald-600 text-white py-2 rounded-xl hover:bg-emerald-700 font-bold text-xs flex items-center justify-center gap-1.5 shadow-sm transition"
+                              >
+                                <Wallet size={14} /> ክፍያ ፈጸም
+                              </button>
+                            )}
+                          </div>
+
+                          {isAdmin && (
+                            <button
+                              onClick={() => { setSelectedGroup(group); setShowAddMemberModal(true); }}
+                              className="w-full bg-indigo-50 text-indigo-700 border border-indigo-100 py-2 rounded-xl hover:bg-indigo-100 font-bold text-xs flex items-center justify-center gap-1.5 transition"
+                            >
+                              <UserPlus size={14} /> አባል በስልክ ቁጥር ጨምር
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </>
+          )}
+
+          {/* TAB 2: PENDING PAYMENTS MANAGEMENT */}
+          {activeTab === 'payments' && user?.role === 'admin' && (
+            <div className="space-y-6">
+              <div>
+                <h2 className="text-2xl font-black text-gray-900 tracking-tight">የባንክ ክፍያ ማረጋገጫዎች</h2>
+                <p className="text-xs text-gray-500 mt-0.5">የአባላትን የባንክ ደረሰኞች እና የኦንላይን ክፍያ ጥያቄዎች እዚህ ይገመግሙ።</p>
+              </div>
+
+              {pendingPayments.length === 0 ? (
+                <div className="text-center py-16 bg-white rounded-2xl border p-8 text-gray-400">
+                  <p className="text-sm">ምንም የሚጠብቅ የክፍያ ጥያቄ የለም።</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {pendingPayments.map((p) => (
+                    <div key={p._id} className="flex flex-col sm:flex-row justify-between items-start sm:items-center p-5 border rounded-2xl bg-white shadow-sm gap-4">
+                      <div className="flex items-center gap-4">
+                        {p.receiptUrl ? (
+                          <img 
+                            src={p.receiptUrl} 
+                            alt="ደረሰኝ" 
+                            onClick={() => setPreviewImage(p.receiptUrl)}
+                            className="w-16 h-16 object-cover rounded-xl border cursor-pointer hover:opacity-80 transition shadow-sm"
+                          />
+                        ) : (
+                          <div className="w-16 h-16 bg-gray-100 rounded-xl border flex items-center justify-center text-xs text-gray-400 font-bold">
+                            Chapa
+                          </div>
+                        )}
+                        <div>
+                          <p className="font-bold text-sm text-gray-900">{p.member?.name} <span className="text-xs text-gray-400 font-normal">({p.member?.phone})</span></p>
+                          <p className="text-xs text-gray-600 mt-0.5">
+                            እቁብ፡ <span className="font-semibold text-blue-600">{p.ekubGroup?.title}</span>
+                          </p>
+                          <p className="text-xs text-green-600 font-extrabold mt-1">
+                            መጠን፡ {p.amount} ብር {p.transactionRef && `| Ref: ${p.transactionRef}`}
+                          </p>
+                        </div>
+                      </div>
+
+                      {p.paymentMethod === 'receipt' && (
+                        <div className="flex gap-2 w-full sm:w-auto">
+                          <button 
+                            onClick={() => handleApprove(p._id, 'approved')} 
+                            className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 bg-green-600 text-white px-4 py-2 rounded-xl text-xs font-bold hover:bg-green-700 transition shadow-sm"
+                          >
+                            <CheckCircle size={15} /> አጽድቅ
+                          </button>
+                          <button 
+                            onClick={() => handleApprove(p._id, 'rejected')} 
+                            className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 bg-red-600 text-white px-4 py-2 rounded-xl text-xs font-bold hover:bg-red-700 transition shadow-sm"
+                          >
+                            <XCircle size={15} /> ውድቅ አድርግ
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+        </main>
       </div>
 
+      {/* CREATE GROUP MODAL */}
       {showCreateModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-xl p-6 w-full max-w-md max-h-[90vh] overflow-y-auto">
-            <h3 className="text-xl font-bold mb-4">አዲስ የእቁብ ቢሮ መመስረቻ</h3>
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-3xl p-6 w-full max-w-md max-h-[90vh] overflow-y-auto shadow-2xl">
+            <h3 className="text-lg font-black text-gray-900 mb-4">አዲስ የእቁብ ቢሮ መመስረቻ</h3>
             <form onSubmit={handleCreateGroup} className="space-y-4">
               <div>
-                <label className="block text-sm font-medium">የእቁብ ስም</label>
-                <input type="text" required className="w-full border p-2 rounded-lg mt-1" value={title} onChange={e => setTitle(e.target.value)} placeholder="የ 10,000 ብር እቁብ" />
+                <label className="block text-xs font-bold text-gray-700">የእቁብ ስም</label>
+                <input type="text" required className="w-full border border-gray-200 p-2.5 rounded-xl text-xs mt-1 bg-gray-50/50" value={title} onChange={e => setTitle(e.target.value)} placeholder="የ 10,000 ብር እቁብ" />
               </div>
               <div>
-                <label className="block text-sm font-medium">የእቁብ ዓይነት</label>
-                <select className="w-full border p-2 rounded-lg mt-1" value={type} onChange={e => setType(e.target.value)}>
+                <label className="block text-xs font-bold text-gray-700">የእቁብ ዓይነት</label>
+                <select className="w-full border border-gray-200 p-2.5 rounded-xl text-xs mt-1 bg-gray-50/50" value={type} onChange={e => setType(e.target.value)}>
                   <option value="target">በተቀመጠ ዓማ (Target Goal)</option>
                   <option value="lottery">በዕጣ የሚወጣ (Lottery)</option>
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium">የአንድ ዙር ክፍያ መጠን (ብር)</label>
-                <input type="number" required className="w-full border p-2 rounded-lg mt-1" value={contributionAmount} onChange={e => setContributionAmount(e.target.value)} placeholder="200" />
+                <label className="block text-xs font-bold text-gray-700">የአንድ ዙር ክፍያ መጠን (ብር)</label>
+                <input type="number" required className="w-full border border-gray-200 p-2.5 rounded-xl text-xs mt-1 bg-gray-50/50" value={contributionAmount} onChange={e => setContributionAmount(e.target.value)} placeholder="1000" />
               </div>
 
               <div>
-                <label className="block text-sm font-medium">
-                  {type === 'target' ? 'የመጀመሪያ ዓማ (Target Goal Amount)' : 'ጠቅላላ የዕጣ መጠን (Total Lottery Amount)'}
+                <label className="block text-xs font-bold text-gray-700">
+                  {type === 'target' ? 'የዒላማ (Target Goal Amount)' : 'ጠቅላላ የዕጣ መጠን'}
                 </label>
-                <input 
-                  type="number" 
-                  required 
-                  className="w-full border p-2 rounded-lg mt-1" 
-                  value={targetGoal} 
-                  onChange={e => setTargetGoal(e.target.value)} 
-                  placeholder="10000" 
-                />
+                <input type="number" required className="w-full border border-gray-200 p-2.5 rounded-xl text-xs mt-1 bg-gray-50/50" value={targetGoal} onChange={e => setTargetGoal(e.target.value)} placeholder="10000" />
               </div>
 
               {type === 'lottery' && (
                 <div>
-                  <label className="block text-sm font-medium text-blue-700">ዕጣው በስንት ቀን ይወጣል? (የቀን ብዛት)</label>
-                  <select 
-                    className="w-full border p-2 rounded-lg mt-1 bg-blue-50/50 border-blue-200 font-semibold"
-                    value={drawIntervalDays} 
-                    onChange={e => setDrawIntervalDays(e.target.value)}
-                  >
+                  <label className="block text-xs font-bold text-blue-700">ዕጣው በስንት ቀን ይወጣል? (የቀን ብዛት)</label>
+                  <select className="w-full border border-blue-200 p-2.5 rounded-xl text-xs mt-1 bg-blue-50/40 font-bold" value={drawIntervalDays} onChange={e => setDrawIntervalDays(e.target.value)}>
                     <option value={1}>በ 1 ቀን (በቀን)</option>
                     <option value={3}>በ 3 ቀን</option>
                     <option value={5}>በ 5 ቀን</option>
@@ -500,23 +594,17 @@ const Dashboard = () => {
               )}
 
               <div>
-                <label className="block text-sm font-medium">የክፍያ ድግግሞሽ</label>
-                <select className="w-full border p-2 rounded-lg mt-1" value={frequency} onChange={e => setFrequency(e.target.value)}>
+                <label className="block text-xs font-bold text-gray-700">የክፍያ ድግግሞሽ</label>
+                <select className="w-full border border-gray-200 p-2.5 rounded-xl text-xs mt-1 bg-gray-50/50" value={frequency} onChange={e => setFrequency(e.target.value)}>
                   <option value="daily">በቀን (Daily)</option>
                   <option value="weekly">በሳምንት (Weekly)</option>
                 </select>
               </div>
 
               {frequency === 'weekly' && (
-                <div className="bg-blue-50 p-3 rounded-lg border border-blue-200">
-                  <label className="block text-sm font-medium text-blue-900 mb-1">
-                    ክፍያው የሚሰበሰብበት ቀን ይምረጡ
-                  </label>
-                  <select
-                    className="w-full border border-blue-300 p-2 rounded-lg bg-white"
-                    value={drawDay}
-                    onChange={(e) => setDrawDay(Number(e.target.value))}
-                  >
+                <div className="bg-blue-50/60 p-3.5 rounded-2xl border border-blue-100">
+                  <label className="block text-xs font-bold text-blue-900 mb-1.5">ክፍያው የሚሰበሰብበት ቀን ይምረጡ</label>
+                  <select className="w-full border border-blue-200 p-2.5 rounded-xl bg-white text-xs font-semibold" value={drawDay} onChange={(e) => setDrawDay(Number(e.target.value))}>
                     <option value={1}>ሰኞ (Monday)</option>
                     <option value={2}>ማክሰኞ (Tuesday)</option>
                     <option value={3}>ረቡዕ (Wednesday)</option>
@@ -529,55 +617,58 @@ const Dashboard = () => {
               )}
 
               <div className="flex gap-3 pt-2">
-                <button type="button" onClick={() => setShowCreateModal(false)} className="w-1/2 border py-2 rounded-lg">ሰርዝ</button>
-                <button type="submit" className="w-1/2 bg-blue-600 text-white py-2 rounded-lg">ፍጠር</button>
+                <button type="button" onClick={() => setShowCreateModal(false)} className="w-1/2 border border-gray-200 py-2.5 rounded-xl font-bold text-xs text-gray-600 hover:bg-gray-50">ሰርዝ</button>
+                <button type="submit" className="w-1/2 bg-blue-600 hover:bg-blue-700 text-white py-2.5 rounded-xl font-bold text-xs shadow-md">ፍጠር</button>
               </div>
             </form>
           </div>
         </div>
       )}
 
+      {/* ADD MEMBER MODAL */}
       {showAddMemberModal && selectedGroup && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-xl p-6 w-full max-w-md">
-            <h3 className="text-xl font-bold mb-2">አባል መመዝገቢያ - {selectedGroup.title}</h3>
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-3xl p-6 w-full max-w-md shadow-2xl">
+            <h3 className="text-lg font-black text-gray-900 mb-1">አባል መመዝገቢያ</h3>
+            <p className="text-xs text-gray-400 mb-4">{selectedGroup.title}</p>
             
             <form onSubmit={handleAddMemberToGroup} className="space-y-4">
               <div>
-                <label className="block text-sm font-medium">አባል ስልክ ቁጥር</label>
-                <input type="text" required className="w-full border p-2 rounded-lg mt-1" value={memberPhone} onChange={e => setMemberPhone(e.target.value)} placeholder="09xxxxxxxx" />
+                <label className="block text-xs font-bold text-gray-700">የአባል ስልክ ቁጥር</label>
+                <input type="text" required className="w-full border border-gray-200 p-2.5 rounded-xl text-xs mt-1 bg-gray-50/50" value={memberPhone} onChange={e => setMemberPhone(e.target.value)} placeholder="09xxxxxxxx" />
               </div>
 
               <div className="flex gap-3 pt-2">
-                <button type="button" onClick={() => setShowAddMemberModal(false)} className="w-1/2 border py-2 rounded-lg">ሰርዝ</button>
-                <button type="submit" className="w-1/2 bg-indigo-600 text-white py-2 rounded-lg hover:bg-indigo-700">አክል</button>
+                <button type="button" onClick={() => setShowAddMemberModal(false)} className="w-1/2 border border-gray-200 py-2.5 rounded-xl font-bold text-xs text-gray-600 hover:bg-gray-50">ሰርዝ</button>
+                <button type="submit" className="w-1/2 bg-indigo-600 hover:bg-indigo-700 text-white py-2.5 rounded-xl font-bold text-xs shadow-md">አካት</button>
               </div>
             </form>
           </div>
         </div>
       )}
 
+      {/* PAYMENT MODAL */}
       {showPayModal && selectedGroup && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-xl p-6 w-full max-w-md">
-            <h3 className="text-xl font-bold mb-2">ክፍያ ማሰሪያ - {selectedGroup.title}</h3>
-            <p className="text-sm text-gray-600 mb-4">መጠን፡ <span className="font-bold">{selectedGroup.contributionAmount} ብር</span></p>
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-3xl p-6 w-full max-w-md shadow-2xl">
+            <h3 className="text-lg font-black text-gray-900 mb-1">ክፍያ ማሰሪያ</h3>
+            <p className="text-xs text-gray-500 mb-4">{selectedGroup.title} | መጠን፡ <span className="font-extrabold text-green-600">{selectedGroup.contributionAmount} ብር</span></p>
 
             <form onSubmit={handlePayment} className="space-y-4">
               <div>
-                <label className="block text-sm font-medium mb-1">የክፍያ መሣሪያ ይምረጡ</label>
+                <label className="block text-xs font-bold text-gray-700 mb-1.5">የክፍያ ማድረሻ ይምረጡ</label>
                 <div className="grid grid-cols-2 gap-2">
                   <button
                     type="button"
                     onClick={() => setPaymentMethod('receipt')}
-                    className={`p-2.5 border rounded-lg text-sm font-medium ${paymentMethod === 'receipt' ? 'border-blue-600 bg-blue-50 text-blue-700' : ''}`}
+                    className={`p-2.5 border rounded-xl text-xs font-bold transition ${paymentMethod === 'receipt' ? 'border-blue-600 bg-blue-50 text-blue-700 shadow-sm' : 'border-gray-200 text-gray-600'}`}
                   >
                     የባንክ ደረሰኝ (Screenshot)
                   </button>
                   <button
                     type="button"
                     onClick={() => setPaymentMethod('chapa')}
-                    className={`p-2.5 border rounded-lg text-sm font-medium ${paymentMethod === 'chapa' ? 'border-blue-600 bg-blue-50 text-blue-700' : ''}`}
+                    className={`p-2.5 border rounded-xl text-xs font-bold transition ${paymentMethod === 'chapa' ? 'border-blue-600 bg-blue-50 text-blue-700 shadow-sm' : 'border-gray-200 text-gray-600'}`}
                   >
                     Chapa Online
                   </button>
@@ -585,52 +676,41 @@ const Dashboard = () => {
               </div>
 
               {paymentMethod === 'receipt' ? (
-                <div className="space-y-3 bg-gray-50 p-3 rounded-lg border">
-                  <p className="text-xs text-gray-600">
+                <div className="space-y-3 bg-gray-50/70 p-4 rounded-2xl border border-gray-100">
+                  <p className="text-xs text-gray-600 font-medium">
                     የአስተዳዳሪው የባንክ መረጃ <br />
-                    <span className="font-semibold">{selectedGroup.admin?.bankDetails?.bankName || 'CBE'}</span>: 
-                    <span className="font-bold text-gray-800 ml-1">{selectedGroup.admin?.bankDetails?.accountNumber || '1000123456789'}</span>
+                    <span className="font-bold text-gray-900">{selectedGroup.admin?.bankDetails?.bankName || 'CBE'}</span>: 
+                    <span className="font-extrabold text-blue-600 ml-1">{selectedGroup.admin?.bankDetails?.accountNumber || '1000123456789'}</span>
                   </p>
                   <div>
-                    <label className="block text-xs font-medium text-gray-700">የደረሰኝ ምስል (Screenshot) - አማራጭ</label>
-                    <input 
-                      type="file" 
-                      accept="image/*" 
-                      onChange={e => setReceiptFile(e.target.files[0])} 
-                      className="mt-1 text-xs w-full" 
-                    />
+                    <label className="block text-[11px] font-bold text-gray-700">የደረሰኝ ፎቶ (Screenshot)</label>
+                    <input type="file" accept="image/*" onChange={e => setReceiptFile(e.target.files[0])} className="mt-1 text-xs w-full text-gray-500 file:mr-4 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100" />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-gray-700">የግብይት ቁጥር (Ref Number) - አማራጭ</label>
-                    <input 
-                      type="text" 
-                      className="w-full border p-1.5 rounded text-xs bg-white mt-1" 
-                      value={txRef} 
-                      onChange={e => setTxRef(e.target.value)} 
-                      placeholder="FT24xxx" 
-                    />
+                    <label className="block text-[11px] font-bold text-gray-700">የግብይት ቁጥር (Ref Number)</label>
+                    <input type="text" className="w-full border border-gray-200 p-2 rounded-xl text-xs bg-white mt-1" value={txRef} onChange={e => setTxRef(e.target.value)} placeholder="FT24xxx" />
                   </div>
                 </div>
               ) : (
-                <p className="text-xs text-gray-500 bg-blue-50 p-3 rounded border border-blue-200">
-                  'ክፍያ ፈጽም' የሚለውን ሲጫኑ በቀጥታ ወደ Chapa ደህንነቱ የተጠበቀ የክፍያ ገጽ ይመራዎታል።
+                <p className="text-xs text-blue-600 bg-blue-50 p-4 rounded-2xl border border-blue-100 leading-relaxed font-medium">
+                  'ክፍያ ፈጸም' የሚለውን ሲጫኑ በቀጥታ ወደ Chapa ደህንነቱ የተጠበቀ የክፍያ ገጽ ይመራሉ።
                 </p>
               )}
 
               <div className="flex gap-3 pt-2">
-                <button type="button" onClick={() => setShowPayModal(false)} className="w-1/2 border py-2 rounded-lg">ሰርዝ</button>
+                <button type="button" onClick={() => setShowPayModal(false)} className="w-1/2 border border-gray-200 py-2.5 rounded-xl font-bold text-xs text-gray-600 hover:bg-gray-50">ሰርዝ</button>
                 <button 
                   type="submit" 
                   disabled={isSubmittingPayment}
-                  className="w-1/2 bg-emerald-600 text-white py-2 rounded-lg flex items-center justify-center gap-2 font-medium hover:bg-emerald-700 transition disabled:opacity-50"
+                  className="w-1/2 bg-emerald-600 hover:bg-emerald-700 text-white py-2.5 rounded-xl flex items-center justify-center gap-2 font-bold text-xs shadow-md transition disabled:opacity-50"
                 >
                   {isSubmittingPayment ? (
                     <>
-                      <Loader2 size={18} className="animate-spin" />
+                      <Loader2 size={16} className="animate-spin" />
                       <span>እየተላከ ነው...</span>
                     </>
                   ) : (
-                    <span>ክፍያ ፈጽም</span>
+                    <span>ክፍያ ፈጸም</span>
                   )}
                 </button>
               </div>
@@ -639,6 +719,7 @@ const Dashboard = () => {
         </div>
       )}
 
+      {/* LEDGER MODAL */}
       <EkubLedgerModal
         isOpen={showLedgerModal}
         onClose={() => setShowLedgerModal(false)}
@@ -646,22 +727,23 @@ const Dashboard = () => {
         userRole={user?.role}
       />
 
+      {/* IMAGE PREVIEW LIGHTBOX */}
       {previewImage && (
         <div 
           onClick={() => setPreviewImage(null)}
-          className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50 cursor-pointer"
+          className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50 cursor-pointer"
         >
           <div className="relative max-w-4xl max-h-[90vh]" onClick={(e) => e.stopPropagation()}>
             <button 
               onClick={() => setPreviewImage(null)}
-              className="absolute -top-10 right-0 text-white bg-red-600 hover:bg-red-700 px-3 py-1 rounded-full text-sm font-bold shadow-lg"
+              className="absolute -top-12 right-0 text-white bg-red-600 hover:bg-red-700 px-3.5 py-1.5 rounded-xl text-xs font-bold shadow-lg"
             >
               ✕ ዝጋ (Close)
             </button>
             <img 
               src={previewImage} 
               alt="የባንክ ደረሰኝ" 
-              className="max-w-full max-h-[85vh] object-contain rounded-lg shadow-2xl border-2 border-white"
+              className="max-w-full max-h-[85vh] object-contain rounded-2xl shadow-2xl border-2 border-white/20"
             />
           </div>
         </div>
