@@ -14,6 +14,7 @@ connectDB();
 const app = express();
 const server = http.createServer(app);
 
+// server.js
 const io = new Server(server, {
   cors: {
     origin: [
@@ -24,9 +25,19 @@ const io = new Server(server, {
     methods: ["GET", "POST", "PUT", "DELETE"],
     credentials: true
   },
-  transports: ['polling', 'websocket'], // 👈 መጀመሪያ በ polling ተነስቶ ወደ websocket እንዲቀየር ማድረግ
+  transports: ['polling', 'websocket'],
   allowEIO3: true
 });
+
+// app.use(cors()) የሚለውንም በሚከተለው ተካው፦
+app.use(cors({
+  origin: [
+    "https://ekub-app-beta.vercel.app", 
+    "http://localhost:5173",
+    "http://localhost:3000"
+  ],
+  credentials: true
+}));
 
 // Middleware
 app.use(cors());
