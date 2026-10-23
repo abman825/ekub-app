@@ -84,5 +84,5 @@ startCronJobs();
 // ሰርቨሩን ማስነሳት
 const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => {
-  console.log(`🚀 Servilo funkcias kun Socket.io sur la pordo ${PORT}`);
+  console.log(`🚀 Server running with Socket.io on port PORT}`);
 });
