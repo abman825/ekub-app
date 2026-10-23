@@ -133,11 +133,10 @@ const translations = {
   }
 };
 
-// 🛠️ መስመር 136 ን በዚህ አስተካክለው:
 const SOCKET_URL = (import.meta.env && import.meta.env.VITE_API_URL) ? import.meta.env.VITE_API_URL : 'https://ekub-app.onrender.com';
 
 const socket = io(SOCKET_URL, {
-  transports: ['polling', 'websocket'], // 👈 Render ላይ 404 እንዳያመጣ መጀመሪያ Polling ይጠቀማል
+  transports: ['polling', 'websocket'],
   withCredentials: true,
   autoConnect: true
 });
@@ -146,7 +145,7 @@ const Dashboard = () => {
   const { user, logout } = useContext(AuthContext);
   const navigate = useNavigate();
 
-  const [lang, setLang] = useState('am');
+  const [lang, setLang] = useState('om'); // Default language set to Oromo (om)
   const t = translations[lang];
 
   const [groups, setGroups] = useState([]);
@@ -188,39 +187,37 @@ const Dashboard = () => {
       6: lang === 'am' ? 'ቅዳሜ' : lang === 'om' ? 'Sanbata' : 'Saturday',
       0: lang === 'am' ? 'እሁድ' : lang === 'om' ? 'Dilbata' : 'Sunday'
     };
-    return days[dayNumber] !== undefined ? days[dayNumber] : (lang === 'am' ? 'ሰኞ' : 'Monday');
+    return days[dayNumber] !== undefined ? days[dayNumber] : (lang === 'om' ? 'Wiixata' : 'Monday');
   };
 
-  // ⚡ Real-time Socket Listener
-useEffect(() => {
-  if (!user) return;
+  useEffect(() => {
+    if (!user) return;
 
-  // Injira muri room zose
-  groups.forEach(g => {
-    socket.emit('join_group', g._id);
-  });
+    groups.forEach(g => {
+      socket.emit('join_group', g._id);
+    });
 
-  const handlePaymentUpdate = (data) => {
-    console.log('⚡ Event ya payment_updated yakiriwe:', data);
-    fetchGroups();
-    if (user?.role === 'admin') {
-      fetchPendingPayments();
-    }
-  };
+    const handlePaymentUpdate = (data) => {
+      console.log('⚡ Event payment_updated argameera:', data);
+      fetchGroups();
+      if (user?.role === 'admin') {
+        fetchPendingPayments();
+      }
+    };
 
-  const handleLotteryDrawn = (data) => {
-    console.log('⚡ Event ya lottery_drawn yakiriwe:', data);
-    fetchGroups();
-  };
+    const handleLotteryDrawn = (data) => {
+      console.log('⚡ Event lottery_drawn argameera:', data);
+      fetchGroups();
+    };
 
-  socket.on('payment_updated', handlePaymentUpdate);
-  socket.on('lottery_drawn', handleLotteryDrawn);
+    socket.on('payment_updated', handlePaymentUpdate);
+    socket.on('lottery_drawn', handleLotteryDrawn);
 
-  return () => {
-    socket.off('payment_updated', handlePaymentUpdate);
-    socket.off('lottery_drawn', handleLotteryDrawn);
-  };
-}, [user, groups.length]); // Hindura hano ukoreshe groups.length
+    return () => {
+      socket.off('payment_updated', handlePaymentUpdate);
+      socket.off('lottery_drawn', handleLotteryDrawn);
+    };
+  }, [user, groups.length]);
 
   useEffect(() => {
     const searchString = window.location.search;
@@ -267,7 +264,6 @@ useEffect(() => {
       setLoading(true);
       const { data } = await API.get('/ekub');
       setGroups(data);
-      // Join rooms for fetched groups immediately
       data.forEach(g => socket.emit('join_group', g._id));
     } catch (err) {
       console.error('Groups fetch error', err);
@@ -297,7 +293,7 @@ useEffect(() => {
       fetchPendingPayments();
       fetchGroups();
     } catch (err) {
-      alert(err.response?.data?.message || 'ክፍያውን ማስተካከል አልተቻለም');
+      alert(err.response?.data?.message || 'Kaffalticha sirreessuu hin danda’amne');
     }
   };
 
@@ -325,7 +321,7 @@ useEffect(() => {
         socket.emit('join_group', data._id);
       }
     } catch (err) {
-      alert(err.response?.data?.message || 'እቁብ መፍጠር አልተቻለም');
+      alert(err.response?.data?.message || 'Garee Equb uumuu hin danda’amne');
     }
   };
 
@@ -335,12 +331,12 @@ useEffect(() => {
       await API.post(`/ekub/${selectedGroup._id}/add-member`, {
         phone: memberPhone
       });
-      alert('አባል በስኬት ተጨምሯል!');
+      alert('Miseensi milkaa’inaan dabalameera!');
       setShowAddMemberModal(false);
       setMemberPhone('');
       fetchGroups();
     } catch (err) {
-      alert(err.response?.data?.message || 'አባል መጨመር አልተቻለም');
+      alert(err.response?.data?.message || 'Miseensa dabaluun hin danda’amne');
     }
   };
 
@@ -356,7 +352,7 @@ useEffect(() => {
 
     if (estimatedCollected >= totalExpectedGoal) {
       setIsSubmittingPayment(false);
-      return alert('ይህ እቁብ ሙሉ በሙሉ ተሳክቷል!');
+      return alert('Equbiin kun guutummaatti milkaa’era!');
     }
 
     setIsSubmittingPayment(true);
@@ -373,20 +369,20 @@ useEffect(() => {
         if (checkoutUrl) {
           window.location.href = checkoutUrl;
         } else {
-          alert('የክፍያ ሊንክ ማግኘት አልተቻለም!');
+          alert('Liinkii kaffaltii argachuu hin danda’amne!');
           setIsSubmittingPayment(false);
         }
       } catch (err) {
         const errorMsg = typeof err.response?.data === 'string' 
           ? err.response.data 
-          : err.response?.data?.message || 'የ Chapa ክፍያ መጀመር አልተቻለም';
+          : err.response?.data?.message || 'Kaffaltii Chapa jalqabuu hin danda’amne';
         alert(errorMsg);
         setIsSubmittingPayment(false);
       }
     } else {
       if (!receiptFile && !txRef) {
         setIsSubmittingPayment(false);
-        return alert('እባክዎ የባንክ ደረሰኝ ፎቶ ወይም የትራንዛክሽን ቁጥር ያስገቡ!');
+        return alert('Mee nagahee baankii ykn lakkoofsa transakshinii galchaa!');
       }
 
       const formData = new FormData();
@@ -405,7 +401,7 @@ useEffect(() => {
         setTxRef('');
         fetchGroups();
       } catch (err) {
-        alert(err.response?.data?.message || 'ደረሰኝ መላክ አልተቻለም');
+        alert(err.response?.data?.message || 'Nagahee ergusuu hin danda’amne');
       } finally {
         setIsSubmittingPayment(false);
       }
@@ -816,7 +812,7 @@ useEffect(() => {
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-3xl p-6 w-full max-w-md shadow-2xl">
             <h3 className="text-lg font-black text-gray-900 mb-1">{t.makePayment}</h3>
-            <p className="text-xs text-gray-400 mb-4">{selectedGroup.title} - Amount: <span className="font-bold text-blue-600">{selectedGroup.contributionAmount} ETB</span></p>
+            <p className="text-xs text-gray-400 mb-4">{selectedGroup.title} - Hanga: <span className="font-bold text-blue-600">{selectedGroup.contributionAmount} ETB</span></p>
 
             <form onSubmit={handlePayment} className="space-y-4">
               <div>
