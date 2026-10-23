@@ -11,9 +11,13 @@ const Register = () => {
   const [role, setRole] = useState('member');
   const [telegramChatId, setTelegramChatId] = useState('');
   
+  // Admin Payment States
   const [chapaKey, setChapaKey] = useState('');
   const [bankName, setBankName] = useState('');
-  const [accNumber, setAccNumber] = useState('');
+  const [bankAccountNumber, setBankAccountNumber] = useState('');
+  const [bankAccountName, setBankAccountName] = useState('');
+  const [telebirrPhone, setTelebirrPhone] = useState('');
+  const [telebirrName, setTelebirrName] = useState('');
   
   // OTP Verification State
   const [isOtpSent, setIsOtpSent] = useState(false);
@@ -37,9 +41,11 @@ const Register = () => {
         telegramChatId,
         chapaSecretKey: role === 'admin' ? chapaKey : null,
         bankDetails: role === 'admin' ? { 
-          bankName, 
-          accountNumber: accNumber, 
-          accountHolderName: name 
+          bankName: bankName || 'CBE', 
+          bankAccountNumber, 
+          bankAccountName: bankAccountName || name,
+          telebirrPhone,
+          telebirrName: telebirrName || name
         } : {}
       };
       
@@ -50,10 +56,10 @@ const Register = () => {
         navigate('/dashboard');
       } else {
         setIsOtpSent(true);
-        setSuccessMsg(data.message || 'የማረጋገጫ ኮድ በቴሌግራም ተልኮልዎታል!');
+        setSuccessMsg(data.message || 'የማረጋገጫ ኮድ በቴሌግራም ተልጓል!');
       }
     } catch (err) {
-      setError(err.response?.data?.message || 'ምዝገባው አልተሳካም');
+      setError(err.response?.data?.message || 'ምዝገባው አዳልካሳም');
     }
   };
 
@@ -67,7 +73,7 @@ const Register = () => {
         code: otpCode
       });
 
-      alert('🎉 መለያዎ በስኬት ተረጋግጧል! አሁን መግባት ይችላሉ።');
+      alert('🎉 መለያው በስኬት ተረጋግጧል! አሁን መግባት ይችላሉ።');
       navigate('/login');
     } catch (err) {
       setError(err.response?.data?.message || 'የስህተት ማረጋገጫ ኮድ ነው!');
@@ -127,7 +133,7 @@ const Register = () => {
                   onChange={(e) => setRole(e.target.value)}
                 >
                   <option value="member">የእቁብ አባል (Member)</option>
-                  <option value="admin">የእቁብ ሰብሳቢ (Admin)</option>
+                  <option value="admin">የእቁብ አስተዳዳሪ (Admin)</option>
                 </select>
               </div>
 
@@ -151,49 +157,87 @@ const Register = () => {
                   <input 
                     type="text" 
                     required
-                    placeholder="ለምሳሌ፦ 2068983666" 
+                    placeholder="ለማሳያ 2068983666" 
                     className="w-full p-2.5 border rounded-lg text-sm bg-white" 
                     value={telegramChatId} 
                     onChange={(e) => setTelegramChatId(e.target.value)} 
                   />
                   <p className="text-[11px] text-blue-700">
-                    💡 በመጀመሪያ <b>@lilmoo_bot</b> ን በመጫን <b>/start</b> ይበሉ፤ ከዚያ የሚሰጠዎትን የChat ID እዚህ ያስገቡ።
+                    💡 በመጀመሪያ <b>@lilmoo_bot</b> ን በመክፈት <b>/start</b> ይበሉ። ከዚያ የሚሰጣችሁን የChat ID እዚህ ይስቀሉ።
                   </p>
                 </div>
               )}
 
+              {/* Admin Payment Accounts Form */}
               {role === 'admin' && (
-                <div className="p-4 bg-purple-50 rounded-lg space-y-3 border border-purple-200">
-                  <h3 className="font-semibold text-purple-900 text-sm">የአስተዳዳሪ ክፍያ ማቋቋሚያ</h3>
+                <div className="space-y-3 bg-purple-50 p-4 rounded-2xl border border-purple-200 my-3">
+                  <h4 className="text-xs font-bold text-purple-900">የክፍያ መቀበያ መረጃዎች (Admin Payment Accounts)</h4>
+                  
                   <div>
-                    <label className="block text-xs font-medium text-gray-600">Chapa Secret Key (ቁልፎች)</label>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Chapa Secret Key (ለኦንላይን ክፍያ)</label>
                     <input 
                       type="text" 
                       placeholder="CHASECK_TEST-xxxx" 
-                      className="mt-1 block w-full p-2 border rounded text-sm bg-white" 
+                      className="w-full p-2 border rounded text-sm bg-white" 
                       value={chapaKey} 
                       onChange={(e) => setChapaKey(e.target.value)} 
                     />
                   </div>
+
+                  {/* የባንክ መረጃ */}
                   <div className="grid grid-cols-2 gap-2">
                     <div>
-                      <label className="block text-xs font-medium text-gray-600">የባንክ ስም</label>
-                      <input 
-                        type="text" 
-                        placeholder="CBE / Telebirr" 
-                        className="mt-1 block w-full p-2 border rounded text-sm bg-white" 
-                        value={bankName} 
-                        onChange={(e) => setBankName(e.target.value)} 
+                      <label className="block text-xs font-medium text-gray-600 mb-1">የባንክ ስም</label>
+                      <input
+                        type="text"
+                        placeholder="CBE"
+                        value={bankName}
+                        onChange={(e) => setBankName(e.target.value)}
+                        className="w-full border p-2 rounded-xl text-xs bg-white"
                       />
                     </div>
                     <div>
-                      <label className="block text-xs font-medium text-gray-600">የሂሳብ ቁጥር</label>
-                      <input 
-                        type="text" 
-                        placeholder="1000xxxx" 
-                        className="mt-1 block w-full p-2 border rounded text-sm bg-white" 
-                        value={accNumber} 
-                        onChange={(e) => setAccNumber(e.target.value)} 
+                      <label className="block text-xs font-medium text-gray-600 mb-1">የሂሳብ ቁጥር</label>
+                      <input
+                        type="text"
+                        placeholder="1000xxxx"
+                        value={bankAccountNumber}
+                        onChange={(e) => setBankAccountNumber(e.target.value)}
+                        className="w-full border p-2 rounded-xl text-xs bg-white"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">የባንክ ሂሳብ ስም (Account Name)</label>
+                    <input
+                      type="text"
+                      placeholder="የባንክ ባለቤት ስም"
+                      value={bankAccountName}
+                      onChange={(e) => setBankAccountName(e.target.value)}
+                      className="w-full border p-2 rounded-xl text-xs bg-white"
+                    />
+                  </div>
+
+                  {/* የቴሌብር መረጃ */}
+                  <div className="grid grid-cols-2 gap-2 pt-2 border-t border-purple-200">
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">የቴሌብር ስልክ ቁጥር</label>
+                      <input
+                        type="text"
+                        placeholder="09..."
+                        value={telebirrPhone}
+                        onChange={(e) => setTelebirrPhone(e.target.value)}
+                        className="w-full border p-2 rounded-xl text-xs bg-white"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">የቴሌብር ስም</label>
+                      <input
+                        type="text"
+                        placeholder="Telebirr Name"
+                        value={telebirrName}
+                        onChange={(e) => setTelebirrName(e.target.value)}
+                        className="w-full border p-2 rounded-xl text-xs bg-white"
                       />
                     </div>
                   </div>
@@ -209,7 +253,7 @@ const Register = () => {
             </form>
 
             <p className="mt-4 text-center text-sm text-gray-600">
-              አካውንት አለዎት? <Link to="/login" className="text-blue-600 font-semibold hover:underline">ይግቡ</Link>
+              አካውንት አለዎት? <Link to="/login" className="text-blue-600 font-semibold hover:underline">ግባ</Link>
             </p>
           </>
         ) : (

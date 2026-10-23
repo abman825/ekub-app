@@ -14,9 +14,11 @@ const userSchema = new mongoose.Schema({
   verificationCode: { type: String, default: null },
   // Chapa ለሌላቸው Adminዎች (የባንክ ሂሳብ መረጃ)
   bankDetails: {
-    bankName: { type: String, default: '' },
-    accountNumber: { type: String, default: '' },
-    accountHolderName: { type: String, default: '' }
+   bankName: { type: String, default: '' },       // ለምሳሌ CBE
+    bankAccountNumber: { type: String, default: '' },
+    bankAccountName: { type: String, default: '' },
+    telebirrPhone: { type: String, default: '' },   // የቴሌብር ስልክ ቁጥር
+    telebirrName: { type: String, default: '' }
   }
 }, { timestamps: true });
 

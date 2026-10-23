@@ -7,7 +7,8 @@ const {
   login, 
   getMe, 
   forgotPassword, 
-  resetPassword 
+  resetPassword,
+  updateUserProfile // እዚህ ጋር ተጨምሯል
 } = require('../controllers/authController');
 const { protect } = require('../middleware/authMiddleware');
 const { authLimiter } = require('../middleware/rateLimiter');
@@ -79,6 +80,7 @@ router.post(
   resetPassword
 );
 
+router.put('/profile', protect, updateUserProfile);
 router.post('/verify-otp', verifyOTP);
 router.get('/me', protect, getMe);
 

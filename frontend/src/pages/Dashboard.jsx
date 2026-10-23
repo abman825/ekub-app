@@ -4,7 +4,7 @@ import API from '../services/api';
 import { AuthContext } from '../context/AuthContext';
 import { 
   PlusCircle, Wallet, CheckCircle, XCircle, FileText, UserPlus, 
-  Loader2, LayoutDashboard, CreditCard, LogOut, Menu, X, Globe 
+  Loader2, LayoutDashboard, CreditCard, LogOut, Menu, X, Globe, User, Settings as SettingsIcon 
 } from 'lucide-react';
 import EkubLedgerModal from '../components/EkubLedgerModal';
 import SkeletonCard from '../components/SkeletonCard';
@@ -16,6 +16,7 @@ const translations = {
     greeting: "እንኳን ደህና መጡ,",
     dashboard: "ዳሽቦርድ (Dashboard)",
     paymentVerifications: "የክፍያ ማረጋገጫዎች",
+    settings: "ማስተካከያ (Settings)",
     logout: "ከሂሳብ ውጣ (Logout)",
     admin: "አስተዳዳሪ",
     member: "አባል",
@@ -56,6 +57,7 @@ const translations = {
     greeting: "Baga nagaan dhuftan,",
     dashboard: "Daashboordii (Dashboard)",
     paymentVerifications: "Mirkaneessa Kaffaltii",
+    settings: "Sirreeffama (Settings)",
     logout: "Ba'i (Logout)",
     admin: "Bulchaa",
     member: "Miseensa",
@@ -96,6 +98,7 @@ const translations = {
     greeting: "Welcome back,",
     dashboard: "Dashboard",
     paymentVerifications: "Payment Verifications",
+    settings: "Settings",
     logout: "Logout",
     admin: "Admin",
     member: "Member",
@@ -133,8 +136,6 @@ const translations = {
   }
 };
 
-
-
 const SOCKET_URL = 'https://ekub-app.onrender.com';
 
 const socket = io(SOCKET_URL, {
@@ -157,6 +158,8 @@ const Dashboard = () => {
   const [showPayModal, setShowPayModal] = useState(false);
   const [showLedgerModal, setShowLedgerModal] = useState(false);
   const [selectedGroup, setSelectedGroup] = useState(null);
+
+  const [showProfileModal, setShowProfileModal] = useState(false);
 
   const [activeTab, setActiveTab] = useState('dashboard');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -200,7 +203,6 @@ const Dashboard = () => {
     });
 
     const handlePaymentUpdate = (data) => {
-      console.log('⚡ Event payment_updated argameera:', data);
       fetchGroups();
       if (user?.role === 'admin') {
         fetchPendingPayments();
@@ -208,7 +210,6 @@ const Dashboard = () => {
     };
 
     const handleLotteryDrawn = (data) => {
-      console.log('⚡ Event lottery_drawn argameera:', data);
       fetchGroups();
     };
 
@@ -466,6 +467,14 @@ const Dashboard = () => {
               )}
             </button>
           )}
+
+          {/* Settings Button added to Sidebar */}
+          <button
+            onClick={() => { navigate('/settings'); setIsSidebarOpen(false); }}
+            className="w-full flex items-center gap-3 px-4 py-3 rounded-xl font-semibold text-sm text-gray-600 hover:bg-gray-100 transition"
+          >
+            <SettingsIcon size={18} /> {t.settings}
+          </button>
         </nav>
 
         <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-100 bg-white">
@@ -507,12 +516,59 @@ const Dashboard = () => {
               </select>
             </div>
 
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-semibold text-gray-500 hidden sm:inline">{user?.name}</span>
-              <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-blue-600 to-indigo-600 text-white font-bold flex items-center justify-center text-xs shadow">
-                {user?.name?.charAt(0) || 'U'}
+            <div className="relative">
+              <div 
+                onClick={() => setShowProfileModal(!showProfileModal)}
+                className="flex items-center gap-2 cursor-pointer bg-white px-3 py-1.5 rounded-xl border border-gray-200 shadow-sm hover:bg-gray-50 transition"
+              >
+                <span className="text-xs font-bold text-gray-700">{user?.name}</span>
+                <div className="w-7 h-7 rounded-full bg-gradient-to-tr from-blue-600 to-indigo-600 text-white font-bold flex items-center justify-center text-xs shadow">
+                  {user?.name?.charAt(0) || 'U'}
+                </div>
+                <span className="text-gray-400 text-[10px]">▼</span>
               </div>
+
+              {showProfileModal && (
+                <div className="absolute right-0 mt-2 w-64 bg-white rounded-2xl shadow-2xl border border-gray-100 p-4 z-50 space-y-3">
+                  <div className="border-b pb-2 flex items-center gap-2.5">
+                    <div className="w-9 h-9 rounded-full bg-blue-600 text-white font-bold flex items-center justify-center text-sm shadow">
+                      {user?.name?.charAt(0) || 'U'}
+                    </div>
+                    <div>
+                      <p className="text-[10px] text-gray-400 font-semibold uppercase">የተጠቃሚ መረጃ (Profile)</p>
+                      <p className="font-extrabold text-sm text-gray-900">{user?.name}</p>
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-1.5 text-xs text-gray-600">
+                    <p className="flex justify-between">
+                      <span className="text-gray-400">ስልክ ቁጥር:</span> 
+                      <span className="font-bold text-gray-800">{user?.phone || 'N/A'}</span>
+                    </p>
+                    <p className="flex justify-between items-center">
+                      <span className="text-gray-400">የመለያ ዓይነት:</span> 
+                      <span className="font-bold uppercase bg-blue-50 text-blue-700 px-2 py-0.5 rounded-md text-[10px]">
+                        {user?.role}
+                      </span>
+                    </p>
+                    {user?.telegramChatId && (
+                      <p className="flex justify-between">
+                        <span className="text-gray-400">Telegram ID:</span> 
+                        <span className="font-bold text-gray-800">{user.telegramChatId}</span>
+                      </p>
+                    )}
+                  </div>
+
+                  <button
+                    onClick={() => setShowProfileModal(false)}
+                    className="w-full bg-gray-100 hover:bg-gray-200 text-gray-700 py-2 rounded-xl font-bold text-xs transition"
+                  >
+                    ዝጋ (Close)
+                  </button>
+                </div>
+              )}
             </div>
+
           </div>
         </header>
 
@@ -810,11 +866,57 @@ const Dashboard = () => {
         </div>
       )}
 
-      {showPayModal && selectedGroup && (
+      {showAddMemberModal && selectedGroup && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-3xl p-6 w-full max-w-md shadow-2xl">
+            <h3 className="text-lg font-black text-gray-900 mb-1">{t.addMemberPhone}</h3>
+            <p className="text-xs text-gray-400 mb-4">{selectedGroup.title}</p>
+            
+            <form onSubmit={handleAddMemberToGroup} className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-gray-700">Phone Number</label>
+                <input type="text" required className="w-full border border-gray-200 p-2.5 rounded-xl text-xs mt-1 bg-gray-50/50" value={memberPhone} onChange={e => setMemberPhone(e.target.value)} placeholder={t.phonePlaceholder} />
+              </div>
+
+              <div className="flex gap-3 pt-2">
+                <button type="button" onClick={() => setShowAddMemberModal(false)} className="w-1/2 border border-gray-200 py-2.5 rounded-xl font-bold text-xs text-gray-600 hover:bg-gray-50">{t.cancel}</button>
+                <button type="submit" className="w-1/2 bg-indigo-600 hover:bg-indigo-700 text-white py-2.5 rounded-xl font-bold text-xs shadow-md">{t.save}</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {showPayModal && selectedGroup && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-3xl p-6 w-full max-w-md max-h-[90vh] overflow-y-auto shadow-2xl">
             <h3 className="text-lg font-black text-gray-900 mb-1">{t.makePayment}</h3>
-            <p className="text-xs text-gray-400 mb-4">{selectedGroup.title} - Amount: <span className="font-bold text-blue-600">{selectedGroup.contributionAmount} ETB</span></p>
+            <p className="text-xs text-gray-400 mb-3">{selectedGroup.title} - መጠን: <span className="font-bold text-blue-600">{selectedGroup.contributionAmount} ETB</span></p>
+
+            {/* የአድሚን የባንክ እና የቴሌብር መረጃ ማሳያ ካርድ */}
+            {selectedGroup?.admin?.bankDetails && (
+              <div className="bg-blue-50/80 p-3.5 rounded-2xl border border-blue-200 mb-4 text-xs space-y-2.5">
+                <p className="font-bold text-blue-950 flex items-center gap-1">
+                  🏦 ክፍያ የሚፈፀምባቸው የአድሚን ሂሳቦች:
+                </p>
+
+                <div className="grid grid-cols-1 gap-2">
+                  {/* የባንክ አካውንት */}
+                  <div className="bg-white p-2.5 rounded-xl border border-blue-100 shadow-sm">
+                    <p className="font-bold text-blue-800 text-[11px] mb-0.5">🏛️ የባንክ ስም: {selectedGroup.admin.bankDetails.bankName || 'CBE'}</p>
+                    <p className="text-gray-500 text-[10px]">ሂሳብ ቁጥር: <span className="font-extrabold text-blue-900 text-xs">{selectedGroup.admin.bankDetails.bankAccountNumber || 'N/A'}</span></p>
+                    <p className="text-gray-500 text-[10px]">የስም ባለቤት: <span className="font-semibold text-gray-800">{selectedGroup.admin.bankDetails.bankAccountName || selectedGroup.admin.name}</span></p>
+                  </div>
+
+                  {/* የቴሌብር አካውንት */}
+                  <div className="bg-white p-2.5 rounded-xl border border-blue-100 shadow-sm">
+                    <p className="font-bold text-green-700 text-[11px] mb-0.5">📱 Telebirr (ቴሌብር)</p>
+                    <p className="text-gray-500 text-[10px]">ስልክ ቁጥር: <span className="font-extrabold text-green-900 text-xs">{selectedGroup.admin.bankDetails.telebirrPhone || 'N/A'}</span></p>
+                    <p className="text-gray-500 text-[10px]">የስም ባለቤት: <span className="font-semibold text-gray-800">{selectedGroup.admin.bankDetails.telebirrName || selectedGroup.admin.name}</span></p>
+                  </div>
+                </div>
+              </div>
+            )}
 
             <form onSubmit={handlePayment} className="space-y-4">
               <div>
