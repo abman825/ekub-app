@@ -133,7 +133,8 @@ const translations = {
   }
 };
 
-const SOCKET_URL = import.meta.env?.VITE_API_URL || 'https://ekub-app.onrender.com';
+// 🛠️ መስመር 136 ን በዚህ አስተካክለው:
+const SOCKET_URL = (import.meta.env && import.meta.env.VITE_API_URL) ? import.meta.env.VITE_API_URL : 'https://ekub-app.onrender.com';
 
 const socket = io(SOCKET_URL, {
   transports: ['polling', 'websocket'], // 👈 Render ላይ 404 እንዳያመጣ መጀመሪያ Polling ይጠቀማል
