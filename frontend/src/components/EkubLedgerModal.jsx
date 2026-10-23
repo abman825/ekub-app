@@ -5,11 +5,10 @@ import * as XLSX from 'xlsx';
 import confetti from 'canvas-confetti';
 import { io } from 'socket.io-client';
 
-// 🛠️ መስመር 136 ን በዚህ አስተካክለው:
 const SOCKET_URL = (import.meta.env && import.meta.env.VITE_API_URL) ? import.meta.env.VITE_API_URL : 'https://ekub-app.onrender.com';
 
 const socket = io(SOCKET_URL, {
-  transports: ['polling', 'websocket'], // 👈 Render ላይ 404 እንዳያመጣ መጀመሪያ Polling ይጠቀማል
+  transports: ['polling', 'websocket'],
   withCredentials: true,
   autoConnect: true
 });
@@ -19,27 +18,27 @@ const ledgerTranslations = {
     title: "የእቁብ ደፍተር",
     excel: "ኤክሴል",
     print: "ፕሪንት / PDF",
-    winnersHistory: "ባለፈ እጣ አሸናፊዎች",
+    winnersHistory: "የባለፈ እጣ አሸናፊዎች",
     showDetails: "ዝርዝር አሳይ",
     close: "ዝጋ",
     latestWinner: "የቅርብ ጊዜ እጣ አሸናፊ አባል!",
     lotterySystem: "የእጣ ማውጫ ስርዓት",
-    intervalText: "ማወጣሻ ጊዜ፦ በ",
-    daysText: "ቀናት | አባላት፦",
+    intervalText: "ማውጫ ጊዜያት በ",
+    daysText: "ቀናት | አባላት:",
     drawButton: "አዲስ እጣ አውጣ",
     drawing: "እጣ እየወጣ ነው...",
     memberStatusTitle: "የአባላት የክፍያ ሁኔታ (የከፈሉ/ያልከፈሉ)",
-    allStatus: "ሁሉንም ሁኔታ",
+    allStatus: "ሁለቱም ሁኔታ",
     approved: "ጸድቋል (Approved)",
-    pending: "በመጠበቅ ላይ (Pending)",
+    pending: "በመጠባበቅ ላይ (Pending)",
     rejected: "ውድቅ የተደረገ (Rejected)",
-    all: "ሁሉ",
+    all: "ሁሉም",
     paid: "የከፈሉ",
     unpaid: "ያልከፈሉ",
-    searchPlaceholder: "አባል በስም ወይም በስልክ ቁጥር ፈልግ...",
+    searchPlaceholder: "አባል በስም ወይም በስልክ ቁጥር ፍለጋ...",
     noMembers: "ምንም የተገኘ አባል የለም።",
     memberLabel: "አባል / Member",
-    guest: "እርስዎ",
+    guest: "እንግዳ",
     paidLabel: "የተከፈለ (Paid)",
     remainingRoundsLabel: "የቀረ ዙር (Remaining)",
     remainingAmountLabel: "የቀረ ገንዘብ (Remaining Amount)",
@@ -64,7 +63,7 @@ const ledgerTranslations = {
     close: "Cufi",
     latestWinner: "Miseensa Carraan Yeroo Dhihoo Bahe!",
     lotterySystem: "Sirna Baafata Carraa",
-    intervalText: "Yeroo Baafata፦ Guyyaa",
+    intervalText: "Yeroo Baafata Guyyaa",
     daysText: "Keessatti | Miseensota:",
     drawButton: "Carraa Haaraa Baasi",
     drawing: "Carraan bahaa jira...",
@@ -160,11 +159,9 @@ const EkubLedgerModal = ({ isOpen, onClose, group, userRole, currentLang = 'am' 
     }
   }, [isOpen, group]);
 
-  // ⚡ Socket Listener
   useEffect(() => {
     if (!isOpen || !group) return;
 
-    // Join room
     socket.emit('join_group', group._id);
 
     const handlePaymentUpdate = () => {

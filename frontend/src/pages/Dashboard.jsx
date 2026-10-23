@@ -145,7 +145,7 @@ const Dashboard = () => {
   const { user, logout } = useContext(AuthContext);
   const navigate = useNavigate();
 
-  const [lang, setLang] = useState('om'); // Default language set to Oromo (om)
+  const [lang, setLang] = useState('am');
   const t = translations[lang];
 
   const [groups, setGroups] = useState([]);
@@ -187,7 +187,7 @@ const Dashboard = () => {
       6: lang === 'am' ? 'ቅዳሜ' : lang === 'om' ? 'Sanbata' : 'Saturday',
       0: lang === 'am' ? 'እሁድ' : lang === 'om' ? 'Dilbata' : 'Sunday'
     };
-    return days[dayNumber] !== undefined ? days[dayNumber] : (lang === 'om' ? 'Wiixata' : 'Monday');
+    return days[dayNumber] !== undefined ? days[dayNumber] : (lang === 'am' ? 'ሰኞ' : 'Monday');
   };
 
   useEffect(() => {
@@ -293,7 +293,7 @@ const Dashboard = () => {
       fetchPendingPayments();
       fetchGroups();
     } catch (err) {
-      alert(err.response?.data?.message || 'Kaffalticha sirreessuu hin danda’amne');
+      alert(err.response?.data?.message || 'ክፍያውን ማስተካከል አልተቻለም');
     }
   };
 
@@ -321,7 +321,7 @@ const Dashboard = () => {
         socket.emit('join_group', data._id);
       }
     } catch (err) {
-      alert(err.response?.data?.message || 'Garee Equb uumuu hin danda’amne');
+      alert(err.response?.data?.message || 'እቁብ መፍጠር አልተቻለም');
     }
   };
 
@@ -331,12 +331,12 @@ const Dashboard = () => {
       await API.post(`/ekub/${selectedGroup._id}/add-member`, {
         phone: memberPhone
       });
-      alert('Miseensi milkaa’inaan dabalameera!');
+      alert('አባል በስኬት ተጨምሯል!');
       setShowAddMemberModal(false);
       setMemberPhone('');
       fetchGroups();
     } catch (err) {
-      alert(err.response?.data?.message || 'Miseensa dabaluun hin danda’amne');
+      alert(err.response?.data?.message || 'አባል መጨመር አልተቻለም');
     }
   };
 
@@ -352,7 +352,7 @@ const Dashboard = () => {
 
     if (estimatedCollected >= totalExpectedGoal) {
       setIsSubmittingPayment(false);
-      return alert('Equbiin kun guutummaatti milkaa’era!');
+      return alert('ይህ እቁብ ሙሉ በሙሉ ተሳክቷል!');
     }
 
     setIsSubmittingPayment(true);
@@ -369,20 +369,20 @@ const Dashboard = () => {
         if (checkoutUrl) {
           window.location.href = checkoutUrl;
         } else {
-          alert('Liinkii kaffaltii argachuu hin danda’amne!');
+          alert('የክፍያ ሊንክ ማግኘት አልተቻለም!');
           setIsSubmittingPayment(false);
         }
       } catch (err) {
         const errorMsg = typeof err.response?.data === 'string' 
           ? err.response.data 
-          : err.response?.data?.message || 'Kaffaltii Chapa jalqabuu hin danda’amne';
+          : err.response?.data?.message || 'የ Chapa ክፍያ መጀመር አልተቻለም';
         alert(errorMsg);
         setIsSubmittingPayment(false);
       }
     } else {
       if (!receiptFile && !txRef) {
         setIsSubmittingPayment(false);
-        return alert('Mee nagahee baankii ykn lakkoofsa transakshinii galchaa!');
+        return alert('እባክዎ የባንክ ደረሰኝ ፎቶ ወይም የትራንዛክሽን ቁጥር ያስገቡ!');
       }
 
       const formData = new FormData();
@@ -401,7 +401,7 @@ const Dashboard = () => {
         setTxRef('');
         fetchGroups();
       } catch (err) {
-        alert(err.response?.data?.message || 'Nagahee ergusuu hin danda’amne');
+        alert(err.response?.data?.message || 'ደረሰኝ መላክ አልተቻለም');
       } finally {
         setIsSubmittingPayment(false);
       }
@@ -812,7 +812,7 @@ const Dashboard = () => {
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-3xl p-6 w-full max-w-md shadow-2xl">
             <h3 className="text-lg font-black text-gray-900 mb-1">{t.makePayment}</h3>
-            <p className="text-xs text-gray-400 mb-4">{selectedGroup.title} - Hanga: <span className="font-bold text-blue-600">{selectedGroup.contributionAmount} ETB</span></p>
+            <p className="text-xs text-gray-400 mb-4">{selectedGroup.title} - Amount: <span className="font-bold text-blue-600">{selectedGroup.contributionAmount} ETB</span></p>
 
             <form onSubmit={handlePayment} className="space-y-4">
               <div>
