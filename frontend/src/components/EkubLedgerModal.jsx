@@ -5,12 +5,12 @@ import * as XLSX from 'xlsx';
 import confetti from 'canvas-confetti';
 import { io } from 'socket.io-client';
 
-const SOCKET_URL = import.meta.env?.VITE_API_URL || 'http://localhost:5000';
+const SOCKET_URL = import.meta.env?.VITE_API_URL || 'https://ekub-app.onrender.com';
 
-// 🌐 Socket connection
 const socket = io(SOCKET_URL, {
-  transports: ['websocket', 'polling'],
-  withCredentials: true
+  transports: ['polling', 'websocket'], // 👈 Render ላይ 404 እንዳያመጣ መጀመሪያ Polling ይጠቀማል
+  withCredentials: true,
+  autoConnect: true
 });
 
 const ledgerTranslations = {

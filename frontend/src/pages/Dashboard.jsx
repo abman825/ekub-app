@@ -133,10 +133,12 @@ const translations = {
   }
 };
 
-const SOCKET_URL = import.meta.env?.VITE_API_URL || 'http://localhost:5000'; 
+const SOCKET_URL = import.meta.env?.VITE_API_URL || 'https://ekub-app.onrender.com';
+
 const socket = io(SOCKET_URL, {
-  transports: ['websocket', 'polling'],
-  withCredentials: true
+  transports: ['polling', 'websocket'], // 👈 Render ላይ 404 እንዳያመጣ መጀመሪያ Polling ይጠቀማል
+  withCredentials: true,
+  autoConnect: true
 });
 
 const Dashboard = () => {

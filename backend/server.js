@@ -14,14 +14,18 @@ connectDB();
 const app = express();
 const server = http.createServer(app);
 
-// Agordo de Socket.io
 const io = new Server(server, {
   cors: {
-    origin: "*",
+    origin: [
+      "https://ekub-app-beta.vercel.app", 
+      "http://localhost:5173",
+      "http://localhost:3000"
+    ],
     methods: ["GET", "POST", "PUT", "DELETE"],
     credentials: true
   },
-  transports: ['websocket', 'polling']
+  transports: ['polling', 'websocket'], // 👈 መጀመሪያ በ polling ተነስቶ ወደ websocket እንዲቀየር ማድረግ
+  allowEIO3: true
 });
 
 // Middleware
