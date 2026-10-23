@@ -1,87 +1,48 @@
 const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
-const dotenv = require('dotenv');
 const cors = require('cors');
-const connectDB = require('./src/config/db');
-require('./src/utils/telegramBot');
-const startCronJobs = require('./src/utils/cronScheduler');
-const errorHandler = require('./src/middleware/errorHandler');
-
-dotenv.config();
-connectDB();
 
 const app = express();
 const server = http.createServer(app);
 
-// server.js
-const io = new Server(server, {
-  cors: {
-    origin: [
-      "https://ekub-app-beta.vercel.app", 
-      "http://localhost:5173",
-      "http://localhost:3000"
-    ],
-    methods: ["GET", "POST", "PUT", "DELETE"],
-    credentials: true
-  },
-  transports: ['polling', 'websocket'],
-  allowEIO3: true
-});
+// CORS Allow ማድረግ
+const allowedOrigins = [
+  'https://ekub-app-beta.vercel.app',
+  'http://localhost:5173',
+  'http://localhost:3000'
+];
 
-// app.use(cors()) የሚለውንም በሚከተለው ተካው፦
 app.use(cors({
-  origin: [
-    "https://ekub-app-beta.vercel.app", 
-    "http://localhost:5173",
-    "http://localhost:3000"
-  ],
+  origin: allowedOrigins,
   credentials: true
 }));
 
+const io = new Server(server, {
+  cors: {
+    origin: allowedOrigins,
+    methods: ["GET", "POST", "PUT", "DELETE"],
+    credentials: true
+  },
+  transports: ['polling', 'websocket'], // CORS 400 ለመከላከል ሁለቱንም መፍቀድ
+  allowEIO3: true
+});
 
-app.use(express.json());
-
-// Transdoni req.io al ĉiuj itineroj
+// Request Object ላይ io መጫን
 app.use((req, res, next) => {
   req.io = io;
   next();
 });
 
-// Okazaĵoj de Socket.io
 io.on('connection', (socket) => {
-  console.log('⚡ Uzanto konektita per Socket:', socket.id);
+  console.log('⚡ Client connected:', socket.id);
 
-  // Permesi al uzanto aliĝi al specifa grupo (Room)
   socket.on('join_group', (groupId) => {
-    if (groupId) {
-      socket.join(groupId.toString());
-      console.log(`👤 Socket ${socket.id} aliĝis al la grupo: ${groupId}`);
-    }
+    socket.join(groupId);
+    console.log(`User joined group: ${groupId}`);
   });
 
   socket.on('disconnect', () => {
-    console.log('❌ Uzanto malkonektita');
+    console.log('Client disconnected:', socket.id);
   });
-});
-
-// Itineroj (Routes)
-app.use('/api/auth', require('./src/routes/authRoutes'));
-app.use('/api/ekub', require('./src/routes/ekubRoutes'));
-app.use('/api/payment', require('./src/routes/paymentRoutes'));
-
-app.get('/', (req, res) => {
-  res.send('Ekub Backend API funkcias kun Socket.io...');
-});
-
-// Middleware por eraroj
-app.use(errorHandler);
-
-// Komenci Cron Jobs
-startCronJobs();
-
-// Lansigi la servilon
-const PORT = process.env.PORT || 5000;
-server.listen(PORT, () => {
-  console.log(`Servilo funkcias kun Socket.io sur la pordo ${PORT}`);
 });
