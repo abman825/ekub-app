@@ -4,7 +4,7 @@ const User = require('../models/User');
 const axios = require('axios');
 const { notifyPaymentApproved } = require('../utils/telegramBot');
 
-// Helper funkce pro kontrolu limitu plateb uživatele
+// Helper function for user payment limit check
 const checkUserLimit = async (userId, ekubGroupId) => {
   const group = await EkubGroup.findById(ekubGroupId);
   if (!group) return false;
@@ -21,20 +21,20 @@ const checkUserLimit = async (userId, ekubGroupId) => {
   return totalPaid >= userTargetGoal;
 };
 
-// 1. Odeslání potvrzení o platbě (Manual Screenshot Upload)
+// 1. Submit Payment Receipt (Manual Upload)
 const submitReceiptPayment = async (req, res) => {
   try {
     const { ekubGroupId, amount, transactionRef } = req.body;
     const receiptUrl = req.file ? (req.file.path || req.file.secure_url) : null;
 
     if (!receiptUrl && !transactionRef) {
-      return res.status(400).json({ message: 'እባክዎን የባንክ ደረሰኝ ወይም የትራንዛክሽን ቁጥር ያስገቡ!' });
+      return res.status(400).json({ message: 'እባክዎ የባንክ ደረሰኝ ወይም የትራንዛክሽን ቁጥር ያስገቡ!' });
     }
 
     const isFinished = await checkUserLimit(req.user._id, ekubGroupId);
     if (isFinished) {
       return res.status(400).json({ 
-        message: 'እርስዎ የዚህን እቁብ ክፍያ ሙሉ በሙሉ አጠናቀዋል። ተጨማሪ ክፍያ መክፈል አይችሉም!' 
+        message: 'እርሶ የዚህን እቁብ ክፍያ ሙሉ በሙሉ አጠናቀዋል፤ ተጨማሪ ክፍያ መክፈል አይችሉም!' 
       });
     }
 
@@ -48,6 +48,20 @@ const submitReceiptPayment = async (req, res) => {
       status: 'pending'
     });
 
+    // ⚡ Real-time Socket Event: ለአድሚኑ እና ለክፍሉ አባላት ማሳወቅ
+    if (req.io) {
+      req.io.to(ekubGroupId).emit('payment_updated', {
+        groupId: ekubGroupId,
+        status: 'pending',
+        action: 'new_receipt'
+      });
+      req.io.emit('payment_updated', {
+        groupId: ekubGroupId,
+        status: 'pending',
+        action: 'new_receipt'
+      });
+    }
+
     return res.status(201).json({ message: 'የክፍያ ደረሰኙ በስኬት ተልኳል!', contribution }); 
   } catch (error) {
     console.error("UPLOAD ERROR:", error);
@@ -55,7 +69,7 @@ const submitReceiptPayment = async (req, res) => {
   }
 };
 
-// 2. Získání čekajících plateb pro admina (správné Načtení/Populate jména člena)
+// 2. Get Pending Payments for Admin
 const getPendingPayments = async (req, res) => {
   try {
     const contributions = await Contribution.find({ status: 'pending', paymentMethod: 'receipt' })
@@ -79,7 +93,7 @@ const getPendingPayments = async (req, res) => {
   }
 };
 
-// 3. Inicializace platby přes Chapa Online (የተስተካከለና የጸዳ)
+// 3. Initialize Chapa Online Payment
 const initializeChapaPayment = async (req, res) => {
   try {
     const { ekubGroupId, amount } = req.body;
@@ -92,7 +106,7 @@ const initializeChapaPayment = async (req, res) => {
     const isFinished = await checkUserLimit(req.user._id, ekubGroupId);
     if (isFinished) {
       return res.status(400).json({ 
-        message: 'እርስዎ የዚህን እቁብ ክፍያ ሙሉ በሙሉ አጠናቀዋል። ተጨማሪ ክፍያ መክፈል አይችሉም!' 
+        message: 'እርሶ የዚህን እቁብ ክፍያ ሙሉ በሙሉ አጠናቀዋል፤ ተጨማሪ ክፍያ መክፈል አይችሉም!' 
       });
     }
 
@@ -106,7 +120,6 @@ const initializeChapaPayment = async (req, res) => {
       ? req.user.email 
       : `user_${req.user.phone}@gmail.com`;
 
-    // 🔴 በጣም አስፈላጊ: ቻፓ ሊንክ ከመፈጠሩ በፊት ትራንዛክሽኑን በ pending መመዝገብ
     await Contribution.create({
       ekubGroup: ekubGroupId,
       member: req.user._id,
@@ -149,7 +162,7 @@ const initializeChapaPayment = async (req, res) => {
   }
 };
 
-// 4. Ověření Chapa platby
+// 4. Verify Chapa Payment
 const verifyChapaPayment = async (req, res) => {
   try {
     const { tx_ref } = req.params;
@@ -169,23 +182,39 @@ const verifyChapaPayment = async (req, res) => {
       return res.status(404).json({ message: 'ትራንዛክሽኑ አልተገኘም!' });
     }
 
+    const groupId = contribution.ekubGroup._id || contribution.ekubGroup;
+
     if (contribution.status !== 'approved') {
       contribution.status = 'approved';
       await contribution.save();
 
-      await EkubGroup.findByIdAndUpdate(contribution.ekubGroup._id || contribution.ekubGroup, {
+      await EkubGroup.findByIdAndUpdate(groupId, {
         $inc: { totalCollected: contribution.amount }
       });
+
+      // ⚡ Real-time Socket Event
+      if (req.io) {
+        req.io.to(groupId.toString()).emit('payment_updated', {
+          groupId: groupId,
+          status: 'approved',
+          action: 'chapa_verified'
+        });
+        req.io.emit('payment_updated', {
+          groupId: groupId,
+          status: 'approved',
+          action: 'chapa_verified'
+        });
+      }
     }
 
-    return res.json({ message: 'ክፍያው በአውቶማቲክ ተረጋግጦ ጸድቋል!', contribution });
+    return res.json({ message: 'ክፍያው በአውቶማቲክ ተረጋግጦ ጽድቋል!', contribution });
   } catch (error) {
     console.error('Verify Error:', error);
     res.status(500).json({ message: 'ክፍያውን ማረጋገጥ አልተቻለም' });
   }
 };
 
-// 5. Schválení / zamítnutí platby adminem + Telegram notifikace
+// 5. Approve / Reject Payment by Admin + Telegram Notification
 const approveReceiptPayment = async (req, res) => {
   try {
     const { contributionId, status } = req.body;
@@ -195,14 +224,16 @@ const approveReceiptPayment = async (req, res) => {
     }
 
     if (contribution.status === 'approved') {
-      return res.status(400).json({ message: 'ይህ ክፍያ ቀድሞ ጸድቋል!' });
+      return res.status(400).json({ message: 'ይህ ክፍያ ቀድሞ ጽድቋል!' });
     }
 
     contribution.status = status;
     await contribution.save();
 
+    const groupId = contribution.ekubGroup;
+
     if (status === 'approved') {
-      await EkubGroup.findByIdAndUpdate(contribution.ekubGroup, {
+      await EkubGroup.findByIdAndUpdate(groupId, {
         $inc: { totalCollected: contribution.amount }
       });
 
@@ -217,13 +248,27 @@ const approveReceiptPayment = async (req, res) => {
       );
     }
 
+    // ⚡ Real-time Socket Event
+    if (req.io) {
+      req.io.to(groupId.toString()).emit('payment_updated', {
+        groupId: groupId,
+        status: status,
+        action: 'receipt_processed'
+      });
+      req.io.emit('payment_updated', {
+        groupId: groupId,
+        status: status,
+        action: 'receipt_processed'
+      });
+    }
+
     res.json({ message: `የክፍያ ሁኔታው ወደ ${status} የተቀየረ ሲሆን አባሉም በቴሌግራም ተገልጾለታል!`, contribution });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 };
 
-// 6. Získání historie plateb pro konkrétního člena
+// 6. Get Member Ledger
 const getMemberLedger = async (req, res) => {
   try {
     const { ekubGroupId } = req.params;
@@ -238,7 +283,7 @@ const getMemberLedger = async (req, res) => {
   }
 };
 
-// 7. Získání přehledu plateb skupiny pro admina
+// 7. Get Group Ledger for Admin
 const getGroupLedgerForAdmin = async (req, res) => {
   try {
     const { ekubGroupId } = req.params;

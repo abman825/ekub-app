@@ -3,8 +3,16 @@ import API from '../services/api';
 import { CheckCircle, Clock, XCircle, FileText, User, Gift, Trophy, FileSpreadsheet, Printer, Search, Filter } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import confetti from 'canvas-confetti';
+import { io } from 'socket.io-client';
 
-// 🌍 Translations Dictionary for Ledger Modal
+const SOCKET_URL = import.meta.env?.VITE_API_URL || 'http://localhost:5000';
+
+// 🌐 Socket connection
+const socket = io(SOCKET_URL, {
+  transports: ['websocket', 'polling'],
+  withCredentials: true
+});
+
 const ledgerTranslations = {
   am: {
     title: "የእቁብ ደፍተር",
@@ -136,7 +144,6 @@ const EkubLedgerModal = ({ isOpen, onClose, group, userRole, currentLang = 'am' 
   const [isDrawing, setIsDrawing] = useState(false);
   const [showWinnersHistory, setShowWinnersHistory] = useState(false);
 
-  // Search & Filter States
   const [statusFilter, setStatusFilter] = useState('all'); 
   const [searchTerm, setSearchTerm] = useState('');
   const [todayFilter, setTodayFilter] = useState('all'); 
@@ -150,6 +157,32 @@ const EkubLedgerModal = ({ isOpen, onClose, group, userRole, currentLang = 'am' 
       fetchLatestGroupData();
       fetchLedger();
     }
+  }, [isOpen, group]);
+
+  // ⚡ Socket Listener
+  useEffect(() => {
+    if (!isOpen || !group) return;
+
+    // Join room
+    socket.emit('join_group', group._id);
+
+    const handlePaymentUpdate = () => {
+      fetchLatestGroupData();
+      fetchLedger();
+    };
+
+    const handleLotteryDrawn = () => {
+      fetchLatestGroupData();
+      fetchLedger();
+    };
+
+    socket.on('payment_updated', handlePaymentUpdate);
+    socket.on('lottery_drawn', handleLotteryDrawn);
+
+    return () => {
+      socket.off('payment_updated', handlePaymentUpdate);
+      socket.off('lottery_drawn', handleLotteryDrawn);
+    };
   }, [isOpen, group]);
 
   const fetchLatestGroupData = async () => {
@@ -221,7 +254,7 @@ const EkubLedgerModal = ({ isOpen, onClose, group, userRole, currentLang = 'am' 
 
   const handleDrawLottery = async () => {
     if (membersList.length === 0) {
-      return alert('No members found in group!');
+      return alert('አባላት አልተገኙም!');
     }
 
     setIsDrawing(true);
@@ -237,7 +270,7 @@ const EkubLedgerModal = ({ isOpen, onClose, group, userRole, currentLang = 'am' 
         }
       } catch (err) {
         console.error('Error drawing lottery', err);
-        alert(err.response?.data?.message || 'Error drawing lottery');
+        alert(err.response?.data?.message || 'እጣ ማውጣት አልተቻለም');
       } finally {
         setIsDrawing(false);
       }
@@ -304,8 +337,6 @@ const EkubLedgerModal = ({ isOpen, onClose, group, userRole, currentLang = 'am' 
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
       <div className="bg-white rounded-3xl p-6 w-full max-w-3xl max-h-[85vh] overflow-y-auto shadow-2xl">
-        
-        {/* Header */}
         <div className="flex justify-between items-center border-b pb-4 mb-4">
           <div>
             <h3 className="text-xl font-bold text-gray-800">{t.title} - {currentGroup.title}</h3>
@@ -334,7 +365,6 @@ const EkubLedgerModal = ({ isOpen, onClose, group, userRole, currentLang = 'am' 
         </div>
 
         <div className="space-y-4">
-          {/* Winners History */}
           {currentGroup?.type === 'lottery' && currentGroup?.winnersHistory && currentGroup.winnersHistory.length > 0 && (
             <div className="bg-green-50/60 border border-green-200 rounded-2xl overflow-hidden shadow-sm">
               <button
@@ -376,7 +406,6 @@ const EkubLedgerModal = ({ isOpen, onClose, group, userRole, currentLang = 'am' 
             </div>
           )}
 
-          {/* Latest Winner Banner */}
           {currentGroup.type === 'lottery' && winnerObj && (
             <div className="bg-gradient-to-r from-green-50 to-emerald-100 border-2 border-green-400 p-3.5 rounded-2xl text-center shadow-sm">
               <h3 className="text-sm font-bold text-green-800 flex items-center justify-center gap-2">
@@ -388,7 +417,6 @@ const EkubLedgerModal = ({ isOpen, onClose, group, userRole, currentLang = 'am' 
             </div>
           )}
 
-          {/* Admin Lottery Draw Button */}
           {userRole === 'admin' && currentGroup.type === 'lottery' && (
             <div className="bg-gradient-to-r from-purple-50 to-indigo-50 p-4 rounded-2xl border border-purple-200 flex flex-col sm:flex-row justify-between items-center gap-3">
               <div>
@@ -409,10 +437,9 @@ const EkubLedgerModal = ({ isOpen, onClose, group, userRole, currentLang = 'am' 
           )}
 
           {loading ? (
-            <p className="text-center py-8 text-gray-500">Loading...</p>
+            <p className="text-center py-8 text-gray-500">በመጫን ላይ...</p>
           ) : (
             <div>
-              {/* Admin Filter & Payment Status Indicator Section */}
               {userRole === 'admin' && (
                 <div className="mb-5 bg-gray-50/70 p-4 rounded-2xl border space-y-3">
                   <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
@@ -456,7 +483,6 @@ const EkubLedgerModal = ({ isOpen, onClose, group, userRole, currentLang = 'am' 
                     </div>
                   </div>
 
-                  {/* Search Input */}
                   <div className="relative">
                     <Search size={14} className="absolute left-3 top-3 text-gray-400" />
                     <input
@@ -468,7 +494,6 @@ const EkubLedgerModal = ({ isOpen, onClose, group, userRole, currentLang = 'am' 
                     />
                   </div>
 
-                  {/* Member Buttons with Red/Green Indicators */}
                   <div className="flex flex-wrap gap-2 max-h-36 overflow-y-auto pt-1">
                     {filteredMembersList.length === 0 ? (
                       <p className="text-xs text-gray-400 italic">{t.noMembers}</p>
@@ -499,7 +524,6 @@ const EkubLedgerModal = ({ isOpen, onClose, group, userRole, currentLang = 'am' 
                 </div>
               )}
 
-              {/* Summary Cards */}
               {(selectedMember || userRole === 'member') && (
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4 bg-blue-50/50 p-3.5 rounded-2xl border border-blue-100">
                   <div>
@@ -521,7 +545,6 @@ const EkubLedgerModal = ({ isOpen, onClose, group, userRole, currentLang = 'am' 
                 </div>
               )}
 
-              {/* Table */}
               {userRole === 'admin' && !selectedMember ? (
                 <div className="text-center py-10 bg-gray-50 rounded-2xl border border-dashed text-gray-500 text-xs">
                   {t.selectPrompt}

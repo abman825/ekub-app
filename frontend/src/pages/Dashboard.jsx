@@ -8,8 +8,8 @@ import {
 } from 'lucide-react';
 import EkubLedgerModal from '../components/EkubLedgerModal';
 import SkeletonCard from '../components/SkeletonCard';
+import { io } from 'socket.io-client';
 
-// 🌍 Translations Dictionary (Amharic, Afaan Oromoo, English)
 const translations = {
   am: {
     appName: "እቁብ App",
@@ -133,11 +133,16 @@ const translations = {
   }
 };
 
+const SOCKET_URL = import.meta.env?.VITE_API_URL || 'http://localhost:5000'; 
+const socket = io(SOCKET_URL, {
+  transports: ['websocket', 'polling'],
+  withCredentials: true
+});
+
 const Dashboard = () => {
   const { user, logout } = useContext(AuthContext);
   const navigate = useNavigate();
 
-  // Language State ('am' | 'om' | 'en')
   const [lang, setLang] = useState('am');
   const t = translations[lang];
 
@@ -149,15 +154,12 @@ const Dashboard = () => {
   const [showLedgerModal, setShowLedgerModal] = useState(false);
   const [selectedGroup, setSelectedGroup] = useState(null);
 
-  // Navigation / Sidebar Active Tab State ('dashboard', 'payments')
   const [activeTab, setActiveTab] = useState('dashboard');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
-  // Add Member Modal State
   const [showAddMemberModal, setShowAddMemberModal] = useState(false);
   const [memberPhone, setMemberPhone] = useState('');
 
-  // New Group Form State
   const [title, setTitle] = useState('');
   const [type, setType] = useState('target');
   const [contributionAmount, setContributionAmount] = useState('');
@@ -166,13 +168,11 @@ const Dashboard = () => {
   const [drawIntervalDays, setDrawIntervalDays] = useState(3);
   const [drawDay, setDrawDay] = useState(1);
 
-  // Payment Form State
   const [paymentMethod, setPaymentMethod] = useState('receipt');
   const [receiptFile, setReceiptFile] = useState(null);
   const [txRef, setTxRef] = useState('');
   const [isSubmittingPayment, setIsSubmittingPayment] = useState(false);
 
-  // Image Preview Zoom State
   const [previewImage, setPreviewImage] = useState(null);
 
   const getDayName = (dayNumber) => {
@@ -188,10 +188,40 @@ const Dashboard = () => {
     return days[dayNumber] !== undefined ? days[dayNumber] : (lang === 'am' ? 'ሰኞ' : 'Monday');
   };
 
+  // ⚡ Real-time Socket Listener
+useEffect(() => {
+  if (!user) return;
+
+  // Injira muri room zose
+  groups.forEach(g => {
+    socket.emit('join_group', g._id);
+  });
+
+  const handlePaymentUpdate = (data) => {
+    console.log('⚡ Event ya payment_updated yakiriwe:', data);
+    fetchGroups();
+    if (user?.role === 'admin') {
+      fetchPendingPayments();
+    }
+  };
+
+  const handleLotteryDrawn = (data) => {
+    console.log('⚡ Event ya lottery_drawn yakiriwe:', data);
+    fetchGroups();
+  };
+
+  socket.on('payment_updated', handlePaymentUpdate);
+  socket.on('lottery_drawn', handleLotteryDrawn);
+
+  return () => {
+    socket.off('payment_updated', handlePaymentUpdate);
+    socket.off('lottery_drawn', handleLotteryDrawn);
+  };
+}, [user, groups.length]); // Hindura hano ukoreshe groups.length
+
   useEffect(() => {
     const searchString = window.location.search;
     const urlParams = new URLSearchParams(searchString);
-    
     let txRefParam = urlParams.get('tx_ref') || urlParams.get('amp;tx_ref');
 
     if (!txRefParam && searchString.includes('tx_ref=')) {
@@ -234,8 +264,10 @@ const Dashboard = () => {
       setLoading(true);
       const { data } = await API.get('/ekub');
       setGroups(data);
+      // Join rooms for fetched groups immediately
+      data.forEach(g => socket.emit('join_group', g._id));
     } catch (err) {
-      console.error('ግሩፖችን ማግኘት አልተቻለም', err);
+      console.error('Groups fetch error', err);
     } finally {
       setLoading(false);
     }
@@ -246,7 +278,7 @@ const Dashboard = () => {
       const { data } = await API.get('/payment/pending');
       setPendingPayments(data);
     } catch (err) {
-      console.error('የሚጠበቁ ክፍያዎችን ማግኘት አልተቻለም', err);
+      console.error('Pending payments fetch error', err);
     }
   };
 
@@ -269,7 +301,7 @@ const Dashboard = () => {
   const handleCreateGroup = async (e) => {
     e.preventDefault();
     try {
-      await API.post('/ekub', {
+      const { data } = await API.post('/ekub', {
         title,
         type,
         contributionAmount: Number(contributionAmount),
@@ -286,6 +318,9 @@ const Dashboard = () => {
       setFrequency('daily');
       setDrawDay(1);
       fetchGroups();
+      if (data && data._id) {
+        socket.emit('join_group', data._id);
+      }
     } catch (err) {
       alert(err.response?.data?.message || 'እቁብ መፍጠር አልተቻለም');
     }
@@ -297,12 +332,12 @@ const Dashboard = () => {
       await API.post(`/ekub/${selectedGroup._id}/add-member`, {
         phone: memberPhone
       });
-      alert('አባል በስኬት ወደ እቁብ ተጨምሯል!');
+      alert('አባል በስኬት ተጨምሯል!');
       setShowAddMemberModal(false);
       setMemberPhone('');
       fetchGroups();
     } catch (err) {
-      alert(err.response?.data?.message || 'አባል መመዝገብ አልተቻለም');
+      alert(err.response?.data?.message || 'አባል መጨመር አልተቻለም');
     }
   };
 
@@ -318,7 +353,7 @@ const Dashboard = () => {
 
     if (estimatedCollected >= totalExpectedGoal) {
       setIsSubmittingPayment(false);
-      return alert('ይህ እቁብ ሙሉ በሙሉ ተሳክቷል! ከዚህ በላይ ክፍያ መፈጸም አይቻልም።');
+      return alert('ይህ እቁብ ሙሉ በሙሉ ተሳክቷል!');
     }
 
     setIsSubmittingPayment(true);
@@ -376,8 +411,6 @@ const Dashboard = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 flex">
-      
-      {/* 📱 SIDEBAR NAVIGATION */}
       <aside className={`fixed inset-y-0 left-0 z-50 w-64 bg-white border-r border-gray-200 transform transition-transform duration-300 ease-in-out md:translate-x-0 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
         <div className="h-16 flex items-center justify-between px-6 border-b border-gray-100">
           <div className="flex items-center gap-2">
@@ -393,7 +426,6 @@ const Dashboard = () => {
           </button>
         </div>
 
-        {/* User Profile */}
         <div className="p-4 mx-4 my-4 bg-blue-50/60 rounded-2xl border border-blue-100/60">
           <p className="text-xs text-gray-500 font-medium">{t.greeting}</p>
           <p className="text-sm font-bold text-gray-800 truncate">{user?.name}</p>
@@ -402,7 +434,6 @@ const Dashboard = () => {
           </span>
         </div>
 
-        {/* Sidebar Links */}
         <nav className="p-4 space-y-1.5">
           <button
             onClick={() => { setActiveTab('dashboard'); setIsSidebarOpen(false); }}
@@ -436,7 +467,6 @@ const Dashboard = () => {
           )}
         </nav>
 
-        {/* Sidebar Footer Logout */}
         <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-100 bg-white">
           <button
             onClick={handleLogout}
@@ -447,10 +477,7 @@ const Dashboard = () => {
         </div>
       </aside>
 
-      {/* MAIN CONTENT CONTAINER */}
       <div className="flex-1 md:ml-64 flex flex-col min-h-screen">
-        
-        {/* Top Navbar with Language Switcher */}
         <header className="h-16 bg-white border-b border-gray-200 px-6 flex justify-between items-center sticky top-0 z-30 shadow-sm">
           <button 
             onClick={() => setIsSidebarOpen(true)}
@@ -466,7 +493,6 @@ const Dashboard = () => {
           </div>
 
           <div className="flex items-center gap-4">
-            {/* 🌐 Language Switcher Dropdown */}
             <div className="flex items-center gap-1.5 bg-gray-100 px-2.5 py-1.5 rounded-xl border border-gray-200 text-xs font-bold text-gray-700">
               <Globe className="text-blue-600" size={14} />
               <select 
@@ -489,13 +515,9 @@ const Dashboard = () => {
           </div>
         </header>
 
-        {/* Page Body Content */}
         <main className="flex-1 p-6 max-w-7xl mx-auto w-full">
-          
-          {/* TAB 1: DASHBOARD & GROUPS VIEW */}
           {activeTab === 'dashboard' && (
             <>
-              {/* GROUPS HEADER & CREATE BUTTON */}
               <div className="flex justify-between items-center mb-6">
                 <div>
                   <h2 className="text-2xl font-black text-gray-900 tracking-tight">{t.groupsTitle}</h2>
@@ -511,7 +533,6 @@ const Dashboard = () => {
                 )}
               </div>
 
-              {/* GROUPS GRID */}
               {loading ? (
                 <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
                   <SkeletonCard />
@@ -594,7 +615,6 @@ const Dashboard = () => {
 
                         <div className="flex flex-col gap-2 pt-2 border-t border-gray-50">
                           <div className="flex gap-2">
-                            {/* 🎯 "የእቁብ ደፍተር" BUTTON CLICK HANDLER ACCORDING TO PROPS */}
                             <button
                               onClick={() => { 
                                 setSelectedGroup(group); 
@@ -632,7 +652,6 @@ const Dashboard = () => {
             </>
           )}
 
-          {/* TAB 2: PENDING PAYMENTS MANAGEMENT */}
           {activeTab === 'payments' && user?.role === 'admin' && (
             <div className="space-y-6">
               <div>
@@ -694,11 +713,9 @@ const Dashboard = () => {
               )}
             </div>
           )}
-
         </main>
       </div>
 
-      {/* CREATE GROUP MODAL */}
       {showCreateModal && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-3xl p-6 w-full max-w-md max-h-[90vh] overflow-y-auto shadow-2xl">
@@ -771,7 +788,6 @@ const Dashboard = () => {
         </div>
       )}
 
-      {/* ADD MEMBER MODAL */}
       {showAddMemberModal && selectedGroup && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-3xl p-6 w-full max-w-md shadow-2xl">
@@ -793,7 +809,6 @@ const Dashboard = () => {
         </div>
       )}
 
-      {/* PAYMENT UPLOAD / CHAPA MODAL */}
       {showPayModal && selectedGroup && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-3xl p-6 w-full max-w-md shadow-2xl">
@@ -855,18 +870,16 @@ const Dashboard = () => {
         </div>
       )}
 
-      {/* LEDGER MODAL */}
-{showLedgerModal && selectedGroup && (
-  <EkubLedgerModal 
-    isOpen={showLedgerModal}
-    group={selectedGroup} 
-    userRole={user?.role} 
-    currentLang={lang}
-    onClose={() => { setShowLedgerModal(false); setSelectedGroup(null); }} 
-  />
-)}
+      {showLedgerModal && selectedGroup && (
+        <EkubLedgerModal 
+          isOpen={showLedgerModal}
+          group={selectedGroup} 
+          userRole={user?.role} 
+          currentLang={lang}
+          onClose={() => { setShowLedgerModal(false); setSelectedGroup(null); }} 
+        />
+      )}
 
-      {/* IMAGE PREVIEW MODAL */}
       {previewImage && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 z-50" onClick={() => setPreviewImage(null)}>
           <div className="relative max-w-4xl max-h-[90vh]">
@@ -877,7 +890,6 @@ const Dashboard = () => {
           </div>
         </div>
       )}
-
     </div>
   );
 };

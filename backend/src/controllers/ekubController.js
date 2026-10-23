@@ -3,7 +3,7 @@ const User = require('../models/User');
 const Contribution = require('../models/Contribution');
 const { notifyLotteryWinner } = require('../utils/telegramBot');
 
-// 1. አዲስ የእቁብ ቢሮ መመስረቻ (Admin Only)
+// 1. አዲስ የእቁብ ቡድን መመስረት (Admin Only)
 const createEkubGroup = async (req, res) => {
   try {
     const { title, type, contributionAmount, targetGoal, frequency, drawIntervalDays, drawDay } = req.body;
@@ -26,7 +26,7 @@ const createEkubGroup = async (req, res) => {
   }
 };
 
-// 2. የእቁብ ቢሮዎችን ማግኘት (በተጠቃሚው ሚና እና ፍጥነት)
+// 2. የእቁብ ቡድኖችን ማግኘት
 const getEkubGroups = async (req, res) => {
   try {
     let groups;
@@ -47,7 +47,7 @@ const getEkubGroups = async (req, res) => {
   }
 };
 
-// 3. 🟢 አንድ እቁብ ዝርዝር መረጃ ማግኘት (winnersHistory, latestWinner እና currentMaxRound የተካተቱበት)
+// 3. አንድ የእቁብ ቡድን ዝርዝር ማግኘት
 const getEkubGroupById = async (req, res) => {
   try {
     const group = await EkubGroup.findById(req.params.id)
@@ -60,7 +60,6 @@ const getEkubGroupById = async (req, res) => {
       return res.status(404).json({ message: 'የተፈለገው እቁብ አልተገኘም!' });
     }
 
-    // የዚህን እቁብ Approved ክፍያዎች በሙሉ በማምጣት እያንዳንዱ አባል ስንት ዙር እንዳስቀመጠ ማስላት
     const contributions = await Contribution.find({
       ekubGroup: group._id,
       status: 'approved'
@@ -72,7 +71,6 @@ const getEkubGroupById = async (req, res) => {
       memberPaidCounts[m._id.toString()] = memberContribs.length;
     });
 
-    // በቡድኑ ውስጥ አባላቱ የከፈሉት ከፍተኛው የዙር ብዛት (Current Max Round)
     const currentMaxRound = Math.max(0, ...Object.values(memberPaidCounts));
 
     res.json({
@@ -85,7 +83,7 @@ const getEkubGroupById = async (req, res) => {
   }
 };
 
-// 4. አዲስ አባል በስልክ ቁጥር ወደ እቁብ መመዝገብ
+// 4. አዲስ አባል በስልክ ቁጥር መጨመር
 const addMemberToGroup = async (req, res) => {
   try {
     const { groupId } = req.params;
@@ -102,7 +100,7 @@ const addMemberToGroup = async (req, res) => {
     }
 
     if (group.members.includes(member._id)) {
-      return res.status(400).json({ message: 'ይህ አባል ቀድሞ በይህ እቁብ ውስጥ አለ!' });
+      return res.status(400).json({ message: 'ይህ አባል ቀድሞ በዚህ እቁብ ውስጥ አለ!' });
     }
 
     group.members.push(member._id);
@@ -114,7 +112,7 @@ const addMemberToGroup = async (req, res) => {
   }
 };
 
-// 5. ዕጣ አሸናፊን መምረጥ እና የቀን ገደብ ማረጋገጥ (Admin Only) + Telegram Notification
+// 5. እጣ ማውጣት (Admin Only) + Socket + Telegram
 const drawLotteryWinner = async (req, res) => {
   try {
     const { groupId } = req.body;
@@ -124,7 +122,6 @@ const drawLotteryWinner = async (req, res) => {
       return res.status(404).json({ message: 'እቁብ አልተገኘም!' });
     }
 
-    // 🔴 የቀን ገደብ ማረጋገጥ (Validation: በስተቀመጠው drawIntervalDays ሰዓት ብቻ እንዲወጣ)
     if (group.latestWinner && group.latestWinner.wonAt) {
       const lastWonDate = new Date(group.latestWinner.wonAt);
       const today = new Date();
@@ -137,7 +134,7 @@ const drawLotteryWinner = async (req, res) => {
       if (diffInDays < requiredInterval) {
         const remainingDays = requiredInterval - diffInDays;
         return res.status(400).json({ 
-          message: `የዚህ ዙር ዕጣ ተወጥቷል! የሚቀጥለው ዕጣ ከ ${remainingDays} ቀን በኋላ ማወጣት ይቻላል።` 
+          message: `የዚህ ዙር እጣ ተወጥቷል! የሚቀጥለው እጣ ከ ${remainingDays} ቀን በኋላ ማውጣት ይቻላል።` 
         });
       }
     }
@@ -150,10 +147,9 @@ const drawLotteryWinner = async (req, res) => {
     const activeMembers = group.members.filter(m => m._id.toString() !== adminId);
 
     if (activeMembers.length === 0) {
-      return res.status(400).json({ message: 'ከአስተዳዳሪ ውጪ ሌላ አባል የለም!' });
+      return res.status(400).json({ message: 'ከአስተዳዳሪ ውጭ ሌላ አባል የለም!' });
     }
 
-    // የቅርብ ጊዜውን አሸናፊ ወደ winnersHistory መግባት (ካልተደጋገመ)
     if (group.latestWinner && group.latestWinner.member) {
       const alreadyInHistory = group.winnersHistory.some(
         w => w.member?.toString() === group.latestWinner.member?.toString() &&
@@ -171,7 +167,6 @@ const drawLotteryWinner = async (req, res) => {
     
     let eligibleMembers = activeMembers.filter(m => !previousWinnerIds.includes(m._id.toString()));
     
-    // ሁሉም አባላት ካሸነፉ እንደገና ሁለተኛ ዙር ጀምሮ ማቋረጥ
     if (eligibleMembers.length === 0) {
       group.winnersHistory = [];
       eligibleMembers = activeMembers;
@@ -189,7 +184,6 @@ const drawLotteryWinner = async (req, res) => {
 
     const currentRound = (group.winnersHistory ? group.winnersHistory.length : 0) + 1;
 
-    // Telegram Bot Notification Call
     notifyLotteryWinner(
       group.title,
       selectedWinner.name || 'አባል',
@@ -198,20 +192,31 @@ const drawLotteryWinner = async (req, res) => {
       selectedWinner.telegramChatId
     );
 
-    // 🛠️ ሰርቨሩን ከነ ሙሉ ፖፕሌት (winnersHistory.member) ጋር መመልስ
     const updatedGroup = await EkubGroup.findById(groupId)
       .populate('admin', 'name phone bankDetails chapaSecretKey')
       .populate('members', 'name phone telegramChatId')
       .populate('latestWinner.member', 'name phone telegramChatId')
       .populate('winnersHistory.member', 'name phone telegramChatId');
 
-    res.json({ message: 'የዕጣ አሸናፊው በስኬት ተመዝግቧል!', group: updatedGroup });
+    // ⚡ Real-time Socket Event: ለእቁቡ Room እና ለሁሉም አሳውቅ
+    if (req.io) {
+      req.io.to(groupId.toString()).emit('lottery_drawn', {
+        groupId: group._id,
+        winner: selectedWinner
+      });
+      req.io.emit('lottery_drawn', {
+        groupId: group._id,
+        winner: selectedWinner
+      });
+    }
+
+    res.json({ message: 'የእጣ አሸናፊው በስኬት ተመዝግቧል!', group: updatedGroup });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 };
 
-// 6. አንድ አባል የእቁብ ደፍተር/ክፍያ ታሪክ ማሰባሰቢያ
+// 6. የእቁብ ደፍተር ማግኘት
 const getMemberLedger = async (req, res) => {
   try {
     const { ekubId } = req.params;
