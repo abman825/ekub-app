@@ -4,7 +4,7 @@ const { sendTelegramMessage } = require('./telegramBot');
 
 const startCronJobs = () => {
   // በየዕለቱ ጠዋት 2:00 ሰዓት (8:00 AM) ላይ ይሰራል
-  cron.schedule('26 22 * * *', async () => {
+  cron.schedule('31 10 * * *', async () => {
     console.log('⏰ የዕለታዊ እና ሳምንታዊ እቁብ ማስታወሻዎች እየተላኩ ነው...');
 
     try {
