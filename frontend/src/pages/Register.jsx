@@ -2,7 +2,7 @@ import React, { useState, useContext } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import API from '../services/api';
 import { AuthContext } from '../context/AuthContext';
-import { Send, CheckCircle, ExternalLink } from 'lucide-react';
+import { Send, CheckCircle, ExternalLink, Loader2 } from 'lucide-react'; // Loader2 ተጨምሯል
 
 const Register = () => {
   const [name, setName] = useState('');
@@ -24,14 +24,19 @@ const Register = () => {
   const [otpCode, setOtpCode] = useState('');
   const [error, setError] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
+
+  // 🔄 Loading States ተጨምረዋል
+  const [loading, setLoading] = useState(false);
+  const [verifying, setVerifying] = useState(false);
   
   const { login } = useContext(AuthContext);
   const navigate = useNavigate();
 
-  // 1. የምዝገባ ፎርም ማስተላለፊያ
+  // 1. የምዝገባ ሂደት ማስተላለፊያ
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+    setLoading(true); // 🔄 ሎዲንግ መጀመሩን ማሳየት
     try {
       const payload = {
         name,
@@ -59,7 +64,9 @@ const Register = () => {
         setSuccessMsg(data.message || 'የማረጋገጫ ኮድ በቴሌግራም ተልጓል!');
       }
     } catch (err) {
-      setError(err.response?.data?.message || 'ምዝገባው አዳልካሳም');
+      setError(err.response?.data?.message || 'ምዝገባው አልተሳካም');
+    } finally {
+      setLoading(false); // 🔄 ሎዲንግ ማጠናቀቅ
     }
   };
 
@@ -67,6 +74,7 @@ const Register = () => {
   const handleVerifyOTP = async (e) => {
     e.preventDefault();
     setError('');
+    setVerifying(true); // 🔄 ሎዲንግ መጀመሩን ማሳየት
     try {
       const { data } = await API.post('/auth/verify-otp', {
         phone,
@@ -76,7 +84,9 @@ const Register = () => {
       alert('🎉 መለያው በስኬት ተረጋግጧል! አሁን መግባት ይችላሉ።');
       navigate('/login');
     } catch (err) {
-      setError(err.response?.data?.message || 'የስህተት ማረጋገጫ ኮድ ነው!');
+      setError(err.response?.data?.message || 'የተሳሳተ የማረጋገጫ ኮድ ነው!');
+    } finally {
+      setVerifying(false); // 🔄 ሎዲንግ ማጠናቀቅ
     }
   };
 
@@ -163,7 +173,7 @@ const Register = () => {
                     onChange={(e) => setTelegramChatId(e.target.value)} 
                   />
                   <p className="text-[11px] text-blue-700">
-                    💡 በመጀመሪያ <b>@lilmoo_bot</b> ን በመክፈት <b>/start</b> ይበሉ። ከዚያ የሚሰጣችሁን የChat ID እዚህ ይስቀሉ።
+                    💡 በመጀመሪያ <b>@lilmoo_bot</b> ን በመላክ <b>/start</b> ይበሉ። ከዚያ የሚሰጣችሁን የChat ID እዚህ ጋር ይሙሉ፤
                   </p>
                 </div>
               )}
@@ -208,7 +218,7 @@ const Register = () => {
                     </div>
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1">የባንክ ሂሳብ ስም (Account Name)</label>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">የባንክ ሒሳብ ስም (Account Name)</label>
                     <input
                       type="text"
                       placeholder="የባንክ ባለቤት ስም"
@@ -244,11 +254,14 @@ const Register = () => {
                 </div>
               )}
 
+              {/* 🔄 Submit Button with Spinner */}
               <button 
                 type="submit" 
-                className="w-full bg-green-600 text-white p-2.5 rounded-lg font-medium hover:bg-green-700 transition"
+                disabled={loading}
+                className="w-full bg-green-600 text-white p-2.5 rounded-lg font-medium hover:bg-green-700 transition flex items-center justify-center gap-2 disabled:opacity-50"
               >
-                ተመዝገብ
+                {loading && <Loader2 className="animate-spin" size={18} />}
+                {loading ? 'እየተመዘገበ ነው...' : 'ተመዝገብ'}
               </button>
             </form>
 
@@ -272,7 +285,7 @@ const Register = () => {
             <form onSubmit={handleVerifyOTP} className="space-y-4 pt-2">
               <div>
                 <label className="block text-xs font-medium text-gray-600 mb-1">
-                  በቴሌግራም (@lilmoo_bot) የተላከውን የ 6 አሃዝ ኮድ ያስገቡ
+                  በቴሌግራም (@lilmoo_bot) የተላከውን የ 6 አሃዝ ኮድ እባክዎ ያስገቡ
                 </label>
                 <input 
                   type="text" 
@@ -285,11 +298,14 @@ const Register = () => {
                 />
               </div>
 
+              {/* 🔄 Verify Button with Spinner */}
               <button 
                 type="submit" 
-                className="w-full bg-blue-600 text-white p-2.5 rounded-lg font-medium hover:bg-blue-700 transition flex items-center justify-center gap-2"
+                disabled={verifying}
+                className="w-full bg-blue-600 text-white p-2.5 rounded-lg font-medium hover:bg-blue-700 transition flex items-center justify-center gap-2 disabled:opacity-50"
               >
-                <CheckCircle size={18} /> መለያውን አረጋግጥ
+                {verifying && <Loader2 className="animate-spin" size={18} />}
+                <CheckCircle size={18} /> {verifying ? 'እየተረጋገጠ ነው...' : 'መለያውን አረጋግጥ'}
               </button>
             </form>
           </div>

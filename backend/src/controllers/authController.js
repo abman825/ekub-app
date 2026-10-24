@@ -3,7 +3,7 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { generateOTP, sendVerificationCode } = require('../utils/telegramBot');
 
-// 1. ምዝገባ (Register)
+// 1. ምዝገባ (Register) - ከነ ያልተረጋገጠ አካውንት ማስተካከያ (Unverified Re-OTP Handling) ጋር
 const register = async (req, res) => {
   try {
     const { 
@@ -15,18 +15,43 @@ const register = async (req, res) => {
     const cleanPhone = phone ? phone.trim() : '';
     if (!/^(09|07)\d{8}$/.test(cleanPhone)) {
       return res.status(400).json({ 
-        message: 'እባክዎን ትክክለኛ 10 ዲጂት የስልክ ቁጥር ያስገቡ (ምሳሌ፦ 0911223344)!' 
+        message: 'እባክዎን ትክክለኛ 10 ዲጂት የስልክ ቁጥር ያስገቡ (ምሳሌ፡ 0911223344)!' 
       });
     }
 
     const existingUser = await User.findOne({ phone: cleanPhone });
-    if (existingUser) {
-      return res.status(400).json({ message: 'ይህ የስልክ ቁጥር ቀድሞ ተመዝግቧል!' });
+
+    // 🔴 1.1. ቁጥሩ ከዚህ ቀደም አለ AND ተረጋግጧል (isVerified: true) -> ስህተት አሳይ
+    if (existingUser && existingUser.isVerified) {
+      return res.status(400).json({ message: 'ይህ የስልክ ቁጥር ቀድሞ ተመዝግቧል! እባክዎ በ Login ገፅ ይግቡ።' });
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
     const otpCode = generateOTP();
 
+    // 🟡 1.2. ቁጥሩ አለ KINTU አልተረጋገጠም (ቀደም ብሎ OTP ሳይገባ ወጥቷል) -> መረጃውን አድስና አዲስ OTP ላክ
+    if (existingUser && !existingUser.isVerified) {
+      existingUser.name = name;
+      existingUser.password = hashedPassword;
+      existingUser.role = role || 'member';
+      existingUser.telegramChatId = telegramChatId || existingUser.telegramChatId;
+      existingUser.verificationCode = otpCode; // አዲስ OTP ማዘጋጀት
+
+      await existingUser.save();
+
+      // አዲስ OTP ወደ ቴሌግራም መላክ
+      if (existingUser.role !== 'admin' && existingUser.telegramChatId) {
+        await sendVerificationCode(existingUser.telegramChatId, otpCode);
+      }
+
+      return res.status(200).json({
+        message: 'ቀደም ሲል የተመዘገበ ግን ያልተረጋገጠ አካውንት! አዲስ OTP ወደ ቴሌግራም ተልኳል።',
+        requiresVerification: true,
+        phone: existingUser.phone
+      });
+    }
+
+    // 🟢 1.3. ሙሉ በሙሉ አዲስ ዩዘር ከሆነ -> በዳታቤዝ ውስጥ መመዝገብ
     const userData = {
       name,
       phone: cleanPhone,
@@ -47,7 +72,7 @@ const register = async (req, res) => {
         telebirrPhone: telebirrPhone || bankDetails?.telebirrPhone || '',
         telebirrName: telebirrName || bankDetails?.telebirrName || name
       };
-      userData.isVerified = true; // አድሚን በቀጥታ ይጸድቃል
+      userData.isVerified = true; // አድሚን በቀጥታ ይፀድቃል
     }
 
     const user = await User.create(userData);
@@ -123,7 +148,7 @@ const login = async (req, res) => {
       return res.status(400).json({ message: 'ስልክ ቁጥር ወይም የይለፍ ቃል ስህተት ነው!' });
     }
 
-    // 🛑 እዚህ ጋር ቼክ OTP ሳያረጋግጥ አባል ማርፈግ እንችላለን (አድሚን ካልሆነ በቀር)
+    // 🛑 OTP ሳያረጋግጥ አባል ማለፍ አይችልም (አድሚን ካልሆነ በቀር)
     if (user.role !== 'admin' && !user.isVerified) {
       return res.status(403).json({ 
         message: 'አካውንቱ አልተረጋገጠም! እባክዎን በቴሌግራም የተላከውን የ OTP ማረጋገጫ ኮድ ያስገቡ።',
@@ -174,7 +199,7 @@ const forgotPassword = async (req, res) => {
     }
 
     if (!user.telegramChatId) {
-      return res.status(400).json({ message: 'የተጠቃሚው ቴሌግራም ቻት ማል አገኘም!' });
+      return res.status(400).json({ message: 'የተጠቃሚው ቴሌግራም ቻት አዲ አልተገኘም!' });
     }
 
     const otpCode = generateOTP();
@@ -182,13 +207,13 @@ const forgotPassword = async (req, res) => {
     await user.save();
 
     await sendVerificationCode(user.telegramChatId, otpCode);
-    res.json({ message: 'የይለፍ ቃል ማረጋገጫ OTP ኮድ በቴሌግራም ተልጓል!' });
+    res.json({ message: 'የይለፍ ቃል ማረጋገጫ OTP ኮድ በቴሌግራም ተልኳል!' });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 };
 
-// 6. 🔑 Reset Password - OTP አረጋግጥ አዲስ ፓስወርድ መ establecer
+// 6. 🔑 Reset Password - OTP አረጋግጦ አዲስ ፓስወርድ ማስተካከል
 const resetPassword = async (req, res) => {
   try {
     const { phone, otp, newPassword } = req.body;
@@ -198,12 +223,12 @@ const resetPassword = async (req, res) => {
     }
 
     if (user.verificationCode !== otp) {
-      return res.status(400).json({ message: 'የተሳሳተ ወይም ጊዜው ባለፈበት OTP ኮድ ነው!' });
+      return res.status(400).json({ message: 'የተሳሳተ ወይም ጊዜው ያለፈበት OTP ኮድ ነው!' });
     }
 
     const hashedPassword = await bcrypt.hash(newPassword, 10);
     user.password = hashedPassword;
-    user.verificationCode = null; // ኮዱን ባዶ እንድርጋለን
+    user.verificationCode = null; // ኮዱን ባዶ እናደርገዋለን
     await user.save();
 
     res.json({ message: 'የይለፍ ቃልዎ በስኬት ተቀይሯል! አሁን መግባት ይችላሉ።' });
@@ -211,10 +236,11 @@ const resetPassword = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
-// 7. Update User Profile (የተጠቃሚ መረጃ ማስተካከል)
+
+// 7. Update User Profile (የተጠቃሚ መረጃ ማስተካከያ)
 const updateUserProfile = async (req, res) => {
   try {
-    const userId = req.user.id; // ከ Token የሚገኘው የአስተዳዳሪው ወይም የአባሉ ID
+    const userId = req.user.id; // ከ Token የሚገኘው የባለቤቱ ID
     const { 
       name, phone, oldPassword, password, 
       bankName, bankAccountNumber, bankAccountName, 
