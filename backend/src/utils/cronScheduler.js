@@ -3,8 +3,8 @@ const EkubGroup = require('../models/EkubGroup');
 const { sendTelegramMessage } = require('./telegramBot');
 
 const startCronJobs = () => {
-  // 🇪🇹 በየቀኑ ጠዋት 10:15 AM (በኢትዮጵያ ሰዓት አቆጣጠር) ላይ እንዲሠራ timezone ተጨምሯል
-  cron.schedule('58 16 * * *', async () => {
+  // በየዕለቱ ጠዋት 2:00 ሰዓት (8:00 AM) ላይ ይሰራል
+  cron.schedule('* * * * *', async () => {
     console.log('⏰ የዕለታዊ እና ሳምንታዊ እቁብ ማስታወሻዎች እየተላኩ ነው...');
 
     try {
@@ -14,12 +14,12 @@ const startCronJobs = () => {
       for (const group of activeGroups) {
         if (!group.members || group.members.length === 0) continue;
 
-        // 1. በዕለቱ ለሚሰበሰብ እቁብ (Daily)
+        // 1. በየዕለቱ ለሚሰበሰብ እቁብ (Daily)
         if (group.frequency === 'daily') {
           const message = `🔔 *የእቁብ ክፍያ ማስታወሻ!* 🔔\n\n` +
             `📌 *እቁብ፦* ${group.title}\n` +
-            `💰 *የዕለቱ ክፍያ መጠን፦* ${group.contributionAmount} ብር\n\n` +
-            `እባክዎ የዕለቱን የእቁብ ክፍያ በጊዜ በመፈጸም ደረሰኝዎን ይላኩ! እናመሰግናለን!`;
+            `💰 *የዕለት ክፍያ መጠን፦* ${group.contributionAmount} ብር\n\n` +
+            `እባክዎን የዕለቱን የእቁብ ክፍያ በጊዜ በመፈጸም ደረሰኝዎን ይላኩ! እናመሰግናለን።`;
 
           for (const member of group.members) {
             if (member.telegramChatId) {
@@ -28,12 +28,12 @@ const startCronJobs = () => {
           }
         }
 
-        // 2. በሳምንቱ ለሚሰበሰብ እቁብ (Weekly) - አዲስ በመረጠው የሳምንቱ ቀን ብቻ (ማለትም drawDay == today)
+        // 2. በሳምንቱ ለሚሰበሰብ እቁብ (Weekly) - አድሚኑ በመረጠበት የሳምንት ቀን ብቻ (ማለትም drawDay == today)
         if (group.frequency === 'weekly' && group.drawDay === today) {
-          const message = `📅 *የሳምንቱ እቁብ ክፍያ ማስታወሻ!* 📅\n\n` +
+          const message = `📅 *የሳምንታዊ እቁብ ክፍያ ማስታወሻ!* 📅\n\n` +
             `📌 *እቁብ፦* ${group.title}\n` +
             `💰 *የሳምንቱ ክፍያ መጠን፦* ${group.contributionAmount} ብር\n\n` +
-            `እባክዎ ሳምንታዊውን የእቁብ ክፍያ በጊዜ ይክፈሉ! እናመሰግናለን!`;
+            `እባክዎን የሳምንቱን የእቁብ ክፍያ በጊዜ ይላኩ! እናመሰግናለን።`;
 
           for (const member of group.members) {
             if (member.telegramChatId) {
@@ -42,13 +42,10 @@ const startCronJobs = () => {
           }
         }
       }
-      console.log('✅ ማስታወሻዎች በስኬት ተልለዋል!');
+      console.log('✅ ማስታወሻዎች በተሳካ ሁኔታ ተልከዋል!');
     } catch (error) {
       console.error('Cron Job Error:', error.message);
     }
-  }, {
-    scheduled: true,
-    timezone: "Africa/Addis_Ababa" // 👈 የኢትዮጵያ ሰዓት አቆጣጠርን በትክክል እንዲይዝ ያደርገዋል
   });
 
   console.log('⏰ Automated Reminders Scheduler Started Successfully!');
