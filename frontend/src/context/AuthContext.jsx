@@ -3,19 +3,33 @@ import React, { createContext, useState, useEffect } from 'react';
 export const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null);
-
-  useEffect(() => {
+  // ተጠቃሚው ከ localStorage ጫን እንዲል ማድረግ
+  const [user, setUser] = useState(() => {
     const savedUser = localStorage.getItem('user');
-    if (savedUser) {
-      setUser(JSON.parse(savedUser));
-    }
-  }, []);
+    return savedUser ? JSON.parse(savedUser) : null;
+  });
 
   const login = (data) => {
-    localStorage.setItem('token', data.token);
-    localStorage.setItem('user', JSON.stringify(data.user));
-    setUser(data.user);
+    if (data.token) {
+      localStorage.setItem('token', data.token);
+    }
+    if (data.user) {
+      localStorage.setItem('user', JSON.stringify(data.user));
+      setUser(data.user);
+    } else {
+      // በቀጥታ የተጠቃሚው ዳታ ብቻ ሲመጣ
+      localStorage.setItem('user', JSON.stringify(data));
+      setUser(data);
+    }
+  };
+
+  // በ Settings ወይም Profile ሰዓት መረጃው ወዲያውኑ እንዲዘምን የሚያደርግ
+  const updateUser = (updatedData) => {
+    setUser(prevUser => {
+      const newUserData = { ...prevUser, ...updatedData };
+      localStorage.setItem('user', JSON.stringify(newUserData));
+      return newUserData;
+    });
   };
 
   const logout = () => {
@@ -25,8 +39,10 @@ export const AuthProvider = ({ children }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, logout }}>
+    <AuthContext.Provider value={{ user, login, updateUser, logout }}>
       {children}
     </AuthContext.Provider>
   );
 };
+
+export default AuthProvider;

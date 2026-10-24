@@ -211,13 +211,12 @@ const resetPassword = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
-
-// 7. Update User Profile (የተጠቃሚ መረጃ ማስተካከያ)
+// 7. Update User Profile (የተጠቃሚ መረጃ ማስተካከል)
 const updateUserProfile = async (req, res) => {
   try {
     const userId = req.user.id; // ከ Token የሚገኘው የአስተዳዳሪው ወይም የአባሉ ID
     const { 
-      name, phone, password, 
+      name, phone, oldPassword, password, 
       bankName, bankAccountNumber, bankAccountName, 
       telebirrPhone, telebirrName, chapaSecretKey 
     } = req.body;
@@ -230,8 +229,15 @@ const updateUserProfile = async (req, res) => {
     if (name) user.name = name;
     if (phone) user.phone = phone;
 
-    // አዲስ የይለፍ ቃል (Password) ከተሰጠ ሃሽ አድርጎ መቀየር
+    // አዲስ የይለፍ ቃል (Password) ሲቀየር የድሮውን ማረጋገጥ
     if (password && password.trim() !== '') {
+      if (!oldPassword) {
+        return res.status(400).json({ message: 'እባክዎ የአሁኑን የይለፍ ቃል ያስገቡ!' });
+      }
+      const isMatch = await bcrypt.compare(oldPassword, user.password);
+      if (!isMatch) {
+        return res.status(400).json({ message: 'የተሳሳተ የድሮ የይለፍ ቃል አስገብተዋል!' });
+      }
       const salt = await bcrypt.genSalt(10);
       user.password = await bcrypt.hash(password, salt);
     }
@@ -252,14 +258,15 @@ const updateUserProfile = async (req, res) => {
     const updatedUser = await user.save();
 
     res.status(200).json({
-      message: 'ፕሮፋይሉ በስኬት ተስተካክሏል!',
+      message: 'ፕሮፋይልዎ በስኬት ተስተካክሏል!',
       user: {
         _id: updatedUser._id,
         name: updatedUser.name,
         phone: updatedUser.phone,
         role: updatedUser.role,
         bankDetails: updatedUser.bankDetails,
-        telegramChatId: updatedUser.telegramChatId
+        telegramChatId: updatedUser.telegramChatId,
+        chapaSecretKey: updatedUser.chapaSecretKey
       }
     });
   } catch (error) {
