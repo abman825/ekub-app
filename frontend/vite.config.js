@@ -9,7 +9,7 @@ export default defineConfig({
     tailwindcss(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['favicon.ico', 'logo.svg', 'logo1.svg'],
+      includeAssets: ['favicon.ico', 'pwa-192x192.svg', 'pwa-512x512.svg'],
       manifest: {
         name: 'AB Ekub',
         short_name: 'AB Ekub',
@@ -19,12 +19,12 @@ export default defineConfig({
         display: 'standalone',
         icons: [
           {
-            src: '/logo.svg',
+            src: '/pwa-192x192.svg',
             sizes: '192x192',
             type: 'image/svg+xml'
           },
           {
-            src: '/logo1.svg',
+            src: '/pwa-512x512.svg',
             sizes: '512x512',
             type: 'image/svg+xml'
           }
