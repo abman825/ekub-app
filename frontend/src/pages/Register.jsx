@@ -2,7 +2,7 @@ import React, { useState, useContext } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import API from '../services/api';
 import { AuthContext } from '../context/AuthContext';
-import { Send, CheckCircle, ExternalLink, Loader2 } from 'lucide-react'; // Loader2 ተጨምሯል
+import { Send, CheckCircle, ExternalLink, Loader2 } from 'lucide-react';
 
 const Register = () => {
   const [name, setName] = useState('');
@@ -25,18 +25,18 @@ const Register = () => {
   const [error, setError] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
 
-  // 🔄 Loading States ተጨምረዋል
+  // Loading States
   const [loading, setLoading] = useState(false);
   const [verifying, setVerifying] = useState(false);
   
   const { login } = useContext(AuthContext);
   const navigate = useNavigate();
 
-  // 1. የምዝገባ ሂደት ማስተላለፊያ
+  // 1. የምዝገባ ፎርም ማስተላለፊያ
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
-    setLoading(true); // 🔄 ሎዲንግ መጀመሩን ማሳየት
+    setLoading(true);
     try {
       const payload = {
         name,
@@ -56,17 +56,14 @@ const Register = () => {
       
       const { data } = await API.post('/auth/register', payload);
       
-      if (role === 'admin') {
-        login(data);
-        navigate('/dashboard');
-      } else {
+      
         setIsOtpSent(true);
         setSuccessMsg(data.message || 'የማረጋገጫ ኮድ በቴሌግራም ተልጓል!');
-      }
+      
     } catch (err) {
-      setError(err.response?.data?.message || 'ምዝገባው አልተሳካም');
+      setError(err.response?.data?.message || 'ምዝገባው አዳልካሳም');
     } finally {
-      setLoading(false); // 🔄 ሎዲንግ ማጠናቀቅ
+      setLoading(false);
     }
   };
 
@@ -74,7 +71,7 @@ const Register = () => {
   const handleVerifyOTP = async (e) => {
     e.preventDefault();
     setError('');
-    setVerifying(true); // 🔄 ሎዲንግ መጀመሩን ማሳየት
+    setVerifying(true);
     try {
       const { data } = await API.post('/auth/verify-otp', {
         phone,
@@ -84,9 +81,9 @@ const Register = () => {
       alert('🎉 መለያው በስኬት ተረጋግጧል! አሁን መግባት ይችላሉ።');
       navigate('/login');
     } catch (err) {
-      setError(err.response?.data?.message || 'የተሳሳተ የማረጋገጫ ኮድ ነው!');
+      setError(err.response?.data?.message || 'የሰሁ ስህተት ማረጋገጫ ኮድ ነው!');
     } finally {
-      setVerifying(false); // 🔄 ሎዲንግ ማጠናቀቅ
+      setVerifying(false);
     }
   };
 
@@ -147,36 +144,34 @@ const Register = () => {
                 </select>
               </div>
 
-              {/* Telegram Info and Bot Link for Member Verification */}
-              {role === 'member' && (
-                <div className="p-4 bg-blue-50 rounded-lg border border-blue-200 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <label className="block text-xs font-semibold text-blue-900">
-                      የቴሌግራም Chat ID (ለ OTP ማረጋገጫ)
-                    </label>
-                    <a 
-                      href="https://t.me/lilmoo_bot" 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      className="text-xs text-blue-600 hover:text-blue-800 font-medium flex items-center gap-1 underline"
-                    >
-                      ቦቱን ክፈት (@lilmoo_bot) <ExternalLink size={12} />
-                    </a>
-                  </div>
-
-                  <input 
-                    type="text" 
-                    required
-                    placeholder="ለማሳያ 2068983666" 
-                    className="w-full p-2.5 border rounded-lg text-sm bg-white" 
-                    value={telegramChatId} 
-                    onChange={(e) => setTelegramChatId(e.target.value)} 
-                  />
-                  <p className="text-[11px] text-blue-700">
-                    💡 በመጀመሪያ <b>@lilmoo_bot</b> ን በመላክ <b>/start</b> ይበሉ። ከዚያ የሚሰጣችሁን የChat ID እዚህ ጋር ይሙሉ፤
-                  </p>
+              {/* የቴሌግራም Chat ID ለሁለቱም (አስተዳዳሪ እና አባል) */}
+              <div className="p-4 bg-blue-50 rounded-lg border border-blue-200 space-y-2 my-3">
+                <div className="flex items-center justify-between">
+                  <label className="block text-xs font-semibold text-blue-900">
+                    የቴሌግራም Chat ID (ለ OTP ማረጋገጫ)
+                  </label>
+                  <a 
+                    href="https://t.me/lilmoo_bot" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="text-xs text-blue-600 hover:text-blue-800 font-medium flex items-center gap-1 underline"
+                  >
+                    ቦቱን ክፈት (@lilmoo_bot) <ExternalLink size={12} />
+                  </a>
                 </div>
-              )}
+
+                <input 
+                  type="text" 
+                  required
+                  placeholder="ለማሳያ 2068983666" 
+                  className="w-full p-2.5 border rounded-lg text-sm bg-white" 
+                  value={telegramChatId} 
+                  onChange={(e) => setTelegramChatId(e.target.value)} 
+                />
+                <p className="text-[11px] text-blue-700">
+                  💡 በመጀመሪያ <b>@lilmoo_bot</b> ን በመክፈት <b>/start</b> ይበሉ። ከዚያ የሚሰጣችሁን የChat ID እዚህ ያስገቡ።
+                </p>
+              </div>
 
               {/* Admin Payment Accounts Form */}
               {role === 'admin' && (
@@ -218,7 +213,7 @@ const Register = () => {
                     </div>
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1">የባንክ ሒሳብ ስም (Account Name)</label>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">የባንክ ሂሳብ ስም (Account Name)</label>
                     <input
                       type="text"
                       placeholder="የባንክ ባለቤት ስም"
@@ -254,7 +249,7 @@ const Register = () => {
                 </div>
               )}
 
-              {/* 🔄 Submit Button with Spinner */}
+              {/* Submit Button with Spinner */}
               <button 
                 type="submit" 
                 disabled={loading}
@@ -298,7 +293,7 @@ const Register = () => {
                 />
               </div>
 
-              {/* 🔄 Verify Button with Spinner */}
+              {/* Verify Button with Spinner */}
               <button 
                 type="submit" 
                 disabled={verifying}
